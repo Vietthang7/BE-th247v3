@@ -1,10 +1,2 @@
 .env
 config/
-go.sum
-go.mod
-*.exe
-*.exe~
-vendor/
-.idea/
-tmp
-.vscode/  
