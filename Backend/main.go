@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"intern_247/config"
-	"log"
-
 	"github.com/gofiber/fiber/v2"
+	app2 "intern_247/app"
+	"log"
 )
 
 func main() {
-	config.ConnectDB()
+	app2.Setup()
 	app := fiber.New()
 	app.Get("/", func(c *fiber.Ctx) error {
 		fmt.Println("ok")
