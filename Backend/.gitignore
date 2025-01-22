@@ -5,3 +5,4 @@ public_key.pem
 certificate.pem
 request.csr
 vendor/
+.idea/
