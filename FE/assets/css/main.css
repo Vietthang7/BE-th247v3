@@ -1,0 +1,7 @@
+html,
+body,
+#__nuxt {
+  @apply text-[#4D6FA8];
+  height: 100vh;
+  background-color: #090025;
+}
