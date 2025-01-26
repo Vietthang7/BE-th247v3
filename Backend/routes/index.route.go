@@ -8,4 +8,5 @@ func AdminRoutes(app *fiber.App) {
 
 	// Call CenterRouter to register its routes
 	CenterRouter(admin)
+	AuthRoute(admin)
 }

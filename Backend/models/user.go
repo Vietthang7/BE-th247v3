@@ -38,3 +38,23 @@ type User struct {
 	//OrganStruct       *OrganStruct `gorm:"foreignKey:OrganStructId" json:"organ_struct"`
 	OrganStruct *OrganStruct `json:"organ_struct,omitempty"`
 }
+
+type DataUserReturn struct {
+	ID             uuid.UUID        `json:"id"`
+	FirstTimeLogin bool             `json:"first_time_login"`
+	RoleId         int64            `json:"role_id"`
+	PermissionGrp  *PermissionGroup `json:"permission_grp,omitempty"`
+	Position       int64            `json:"position,omitempty"`
+	FullName       string           `json:"full_name"`
+	Avatar         string           `json:"avatar"`
+	Email          string           `json:"email"`
+	Domain         string           `json:"domain,omitempty"`
+	Phone          string           `json:"phone"`
+	Gender         string           `json:"gender"`
+	Role           string           `json:"role"`
+	BranchID       *uuid.UUID       `json:"branch_id,omitempty"`
+	Token          string           `json:"token"`
+	//SSO_ID         *string          `json:"sso_id"`
+	GoogleId     string `json:"google_id"`
+	RefreshToken string `json:"refresh_token"`
+}
