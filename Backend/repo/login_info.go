@@ -9,6 +9,11 @@ import (
 
 type LoginInfo models.LoginInfo
 
+func (u *LoginInfo) Create() error {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	return app.Database.DB.WithContext(ctx).Create(&u).Error
+}
 func (u *LoginInfo) First(query interface{}, args []interface{}, preload ...string) error {
 	var (
 		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)

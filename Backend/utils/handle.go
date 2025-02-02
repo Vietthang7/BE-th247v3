@@ -1,5 +1,7 @@
 package utils
 
+import "net/mail"
+
 func IsVerifiedEmail(status *bool) bool {
 	return status != nil && *status
 }
@@ -22,4 +24,10 @@ func Index[S ~[]E, E comparable](s S, v E) int {
 // Contains reports whether v is present in s.
 func Contains[S ~[]E, E comparable](s S, v E) bool {
 	return Index(s, v) >= 0
+}
+
+// CHeck email is valid
+func EmailValid(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil
 }

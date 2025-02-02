@@ -29,8 +29,6 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.JSON(fiber.Map{"status": false, "message": "Review your input", "error": err.Error()})
 	}
-	fmt.Println("chay vao day")
-	fmt.Println(input)
 	var loginInfo repo.LoginInfo
 	if err = loginInfo.First("email = ? OR phone = ? OR username = ?",
 		[]interface{}{input.Email, input.Email, input.Email}, "Student", "User"); err != nil {
@@ -60,7 +58,7 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 		emailInfo.Port = app.Config("PORT_EMAIL")
 		code, err := helpers.SendEmailOTP(emailInfo)
 		if err != nil {
-			return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
+			return ResponseError(c, fiber.StatusInternalServerError, "Error send OTP!", consts.SendOTPFailed)
 		}
 		var otpInfo models.OTPLog
 		otpInfo.Code = code
@@ -69,7 +67,7 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 		otpInfo.ExpiredAt = time.Now().Add(time.Minute * 5)
 		err3 := repo.CreateOTPLog(&otpInfo)
 		if err3 != nil {
-			return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
+			return ResponseError(c, fiber.StatusInternalServerError, "Error OTP log!", consts.LoginFailed)
 		}
 		return ResponseError(c, fiber.StatusForbidden, loginInfo.Email, consts.EmailIsNotVerified)
 	}
@@ -250,4 +248,135 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		}
 	}
 	return ResponseSuccess(c, fiber.StatusOK, "Confirmed! Welcome", userReturn)
+}
+
+//	func VerifyToken(c *fiber.Ctx) error {
+//		type Input struct {
+//			Token string `json:"token"`
+//		}
+//		type MyCustomClaims struct {
+//			UserID string `json:"user_id"`
+//			jwt.RegisteredClaims
+//		}
+//		var (
+//			input                     Input
+//			claims                    *MyCustomClaims
+//			fullName, avatar          string
+//			branchId                  *uuid.UUID
+//			position                  int64
+//			loginInfo                 repo.LoginInfo
+//			userLogin, isVerifiedMail bool
+//		)
+//		if err := c.BodyParser(&input); err != nil {
+//			return c.JSON(fiber.Map{"status": false, "message": "Review your input", "error": err.Error(), "user": nil})
+//		}
+//		token, err := jwt.ParseWithClaims(input.Token, &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+//			return []byte(app.Config("SECRET_KEY")), nil
+//		})
+//		if err != nil {
+//			return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
+//		}
+//		ok := false
+//		if claims, ok := token.Claims.(*MyCustomClaims); !ok && !token.Valid {
+//			return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
+//		}
+//		if errInfo := loginInfo.First("id = ?", []interface{}{claims.UserID}, "Student", "User"); errInfo != nil {
+//			return ResponseError(c,fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
+//		}
+//		switch expr {
+//
+//		}
+//
+// }
+func Register(c *fiber.Ctx) error {
+	var (
+		err  error
+		form models.CreateUserForm
+	)
+	if err = c.BodyParser(&form); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusBadRequest,
+			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
+	}
+	form.Username = utils.GenerateUniqueUsername()
+	// data validation
+	var existence repo.LoginInfo
+	if err = existence.First("email = ? OR username = ?", []interface{}{form.Email, form.Username}); err == nil {
+		var (
+			errExist     = ""
+			errExistCode []int
+		)
+		if existence.Email == form.Email {
+			errExist += "Email existed"
+			return ResponseError(c, fiber.StatusBadRequest, errExist, consts.EmailDuplication)
+		}
+		if existence.Username == form.Username {
+			errExist += "Username existed"
+			return ResponseError(c, fiber.StatusBadRequest, errExist, consts.UsernameDuplication)
+		}
+		return ResponseError(c, fiber.StatusBadRequest, errExist, errExistCode)
+	}
+	form.Username = utils.GenerateUniqueUsername()
+	// Create user
+	isActive := true
+	entry := models.User{
+		FullName: form.FullName,
+		Username: form.Username,
+		Email:    form.Email,
+		IsActive: &isActive,
+		RoleId:   consts.CenterOwner,
+	}
+	args := map[string]interface{}{"password": form.Password}
+	if err = repo.RegisterUser(&entry, args); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.RegisterFailed)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, entry.ID)
+}
+
+func ResendOTP(c *fiber.Ctx) error {
+	type EmailInput struct {
+		Email string `json:"email"`
+	}
+	var (
+		input EmailInput
+		err   error
+	)
+	if err = c.BodyParser(&input); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "Failed", consts.InvalidReqInput)
+	}
+	ok := utils.EmailValid(input.Email)
+	if !ok {
+		return ResponseError(c, fiber.StatusBadRequest, "Failed", consts.InvalidReqInput)
+	}
+	var loginInfo repo.LoginInfo
+	if err = loginInfo.First("email = ?", []interface{}{input.Email}); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, "Failed", consts.GetFailed)
+	}
+	if _, err = repo.GetNewestOTPLogByReceiver(input.Email); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "Failed", consts.DataNotFound)
+	}
+	var emailInfo helpers.EmailSchema
+	emailInfo.Title = helpers.EmailVerifyTitle
+	emailInfo.Content = helpers.EmailVerifyContent
+	emailInfo.Receivers = loginInfo.Email
+	emailInfo.Sender = app.Config("SEND_MAIL_EMAIL")
+	emailInfo.Provider = app.Config("PROVIDER")
+	emailInfo.Password = app.Config("SEND_MAIL_PASSWORD")
+	emailInfo.Port = app.Config("PORT_EMAIL")
+	code, err := helpers.SendEmailOTP(emailInfo)
+	if err != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.SendOTPFailed)
+	}
+	var otpInfo models.OTPLog
+	otpInfo.Code = code
+	otpInfo.CreatedBy = loginInfo.ID
+	otpInfo.Receiver = loginInfo.Email
+	otpInfo.ExpiredAt = time.Now().Add(time.Minute * 5)
+	err3 := repo.CreateOTPLog(&otpInfo)
+	if err3 != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.CreateFailed)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "success", loginInfo.Email)
 }
