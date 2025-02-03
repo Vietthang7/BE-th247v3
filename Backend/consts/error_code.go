@@ -11,6 +11,7 @@ const (
 	//public data
 	ERROR_INTERNAL_SERVER_ERROR = 6104 // Lỗi hệ thống
 	ERROR_EXPIRED_TIME          = 6105 // Dữ liệu không phù hợp
+	ERROR_UNAUTHORIZED          = 6101 // Không có quyền truy cập
 	// Auth
 	LoginFailed        = 2005 // Đăng nhập thất bại
 	UserIsInactive     = 2006 // Tài khoản không hoạt động

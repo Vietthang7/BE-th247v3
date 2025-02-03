@@ -121,3 +121,9 @@ func RegisterUser(entry *models.User, args map[string]interface{}) (err error) {
 
 	return tx.Commit().Error
 }
+
+func GetUserByID(user_id uuid.UUID) (models.User, int64, error) {
+	var user models.User
+	query := app.Database.DB.Where("id = ?", user_id).First(&user)
+	return user, query.RowsAffected, query.Error
+}
