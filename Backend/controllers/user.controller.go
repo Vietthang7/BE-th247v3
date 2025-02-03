@@ -120,7 +120,7 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 func VerifyEmailOTP(c *fiber.Ctx) error {
 	type VerifySchema struct {
 		Email string `json:"email"`
-		Code  string `json:"password"`
+		Code  string `json:"code"`
 	}
 	var input VerifySchema
 	if err := c.BodyParser(&input); err != nil {
@@ -132,15 +132,15 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusBadGateway, "Failed 2", consts.GetFailed)
 	}
 	if strings.Compare(otpInfo.Code, input.Code) != 0 {
-		logrus.Error("Invalid OTP !")
+		logrus.Println("Invalid OTP!")
 		return ResponseError(c, fiber.StatusBadRequest, "Failed 2", consts.InvalidReqInput)
 	}
 	if time.Now().After(otpInfo.ExpiredAt) {
-		logrus.Println("Expired OTP !")
+		logrus.Println("Expired OTP!")
 		return ResponseError(c, fiber.StatusBadRequest, "Failed 3", consts.ERROR_EXPIRED_TIME)
 	}
 	if otpInfo.IsConfirmed {
-		logrus.Println("Confirmed OTP !")
+		logrus.Println("OTP Confirmed")
 		return ResponseError(c, fiber.StatusBadRequest, "Failed 4", consts.InvalidReqInput)
 	}
 	otpInfo.IsConfirmed = true
@@ -149,11 +149,13 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		logrus.Error(err2)
 		return ResponseError(c, fiber.StatusInternalServerError, "Failed 5", consts.UpdateFailed)
 	}
+
 	var loginInfo repo.LoginInfo
 	if err = loginInfo.First("email = ?", []interface{}{input.Email}, "User", "Student"); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError, "Failed 6", consts.GetFailed)
 	}
+
 	if loginInfo.User == nil && loginInfo.Student == nil {
 		return ResponseError(c, fiber.StatusInternalServerError, "Failed 7", consts.GetFailed)
 	}
@@ -165,30 +167,36 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 	)
 	if loginInfo.RoleId == consts.Student {
 		if loginInfo.Student.EmailVerified {
-			return ResponseError(c, fiber.StatusBadRequest, "Failed 8", consts.InvalidReqInput)
+			return ResponseError(c, fiber.StatusBadRequest, "Failed", consts.InvalidReqInput)
 		}
+
 		var student repo.Student
 		fullName = loginInfo.Student.FullName
 		avatar = loginInfo.Student.Avatar
 
 		if err = student.VerifyEmail(input.Email); err != nil {
 			logrus.Error(err)
-			return ResponseError(c, fiber.StatusInternalServerError, "Failed 9", consts.UpdateFailed)
+			return ResponseError(c, fiber.StatusInternalServerError, "Failed", consts.UpdateFailed)
 		}
 	} else {
 		if loginInfo.User.EmailVerified {
-			return ResponseError(c, fiber.StatusBadRequest, "Failed 10", consts.InvalidReqInput)
+			return ResponseError(c, fiber.StatusBadRequest, "Failed 8", consts.InvalidReqInput)
 		}
+
 		if err = repo.VerifyUserEmail(input.Email); err != nil {
 			logrus.Error(err)
-			return ResponseError(c, fiber.StatusInternalServerError, "Failed 11", consts.UpdateFailed)
+			return ResponseError(c, fiber.StatusInternalServerError, "Failed", consts.UpdateFailed)
 		}
+
 		if !utils.IsActiveData(loginInfo.User.IsActive) {
 			return c.JSON(fiber.Map{"status": false, "message": "Login failed", "error": consts.UserIsInactive})
 		}
-		if loginInfo.User.PermissionGrpId != nil && !utils.Contains([]int64{consts.Root, consts.Student, consts.CenterOwner}, loginInfo.User.RoleId) {
+
+		if loginInfo.User.PermissionGrpId != nil &&
+			!utils.Contains([]int64{consts.Root, consts.CenterOwner, consts.Student}, loginInfo.User.RoleId) {
 			permissionGrpID = *loginInfo.User.PermissionGrpId
 		}
+
 		fullName = loginInfo.User.FullName
 		avatar = loginInfo.User.Avatar
 		position = loginInfo.User.Position
@@ -205,7 +213,7 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		"full_name": fullName,
 		"role":      roleData,
 		"site_id":   loginInfo.CenterID,
-		//"sso_id" : loginInfo.
+		//"sso_id":    loginInfo.SsoID,
 		"status": true,
 		"exp":    time.Now().Add(time.Hour * 72).Unix(),
 	}
@@ -215,7 +223,7 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		"full_name": fullName,
 		"role":      roleData,
 		"site_id":   loginInfo.CenterID,
-		//"sso_id" : loginInfo.
+		//"sso_id":    loginInfo.SsoID,
 		"status": true,
 		"exp":    time.Now().Add(time.Hour * 168).Unix(),
 	}
@@ -227,7 +235,7 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	refresh_token, errs1 := refreshToken.SignedString([]byte(app.Config("SECRET_KEY")))
 	if errs1 != nil {
-		return ResponseError(c, fiber.StatusInternalServerError, "Failed errs1", consts.UpdateFailed)
+		return ResponseError(c, fiber.StatusInternalServerError, "Failed errs", consts.UpdateFailed)
 	}
 	userReturn := models.DataUserReturn{
 		ID:             loginInfo.ID,
@@ -238,15 +246,18 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		Position:       position,
 		Email:          loginInfo.Email,
 		Phone:          loginInfo.Phone,
-		Token:          t,
-		RefreshToken:   refresh_token,
+		//SSO_ID:         &loginInfo.SsoID,
+		Token:        t,
+		RefreshToken: refresh_token,
 	}
+
 	if permissionGrpID != uuid.Nil {
 		var permissionGrp models.PermissionGroup
 		if permissionGrp, err = repo.FirstPermissionGrp(app.Database.DB.Where("id = ?", permissionGrpID)); err == nil {
 			userReturn.PermissionGrp = &permissionGrp
 		}
 	}
+
 	return ResponseSuccess(c, fiber.StatusOK, "Confirmed! Welcome", userReturn)
 }
 
