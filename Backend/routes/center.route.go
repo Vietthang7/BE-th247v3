@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func CenterRouter(admin fiber.Router) {
-	admin.Post("/center", controllers.CreateCenter)
+func CenterRouter(center fiber.Router) {
+	center.Post("/center", controllers.CreateCenter)
 	//admin.Get("/center", controllers.ReadCenter)
 }
