@@ -2,7 +2,6 @@
 definePageMeta({
   layout: "auth",
 });
-import { ref } from "vue";
 
 const formValue = ref({
   email: "",
