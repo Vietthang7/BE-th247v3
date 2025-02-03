@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -126,4 +127,37 @@ func GetUserByID(user_id uuid.UUID) (models.User, int64, error) {
 	var user models.User
 	query := app.Database.DB.Where("id = ?", user_id).First(&user)
 	return user, query.RowsAffected, query.Error
+}
+func HasPermission(entry models.User, subject, action string) bool {
+	var (
+		err   error
+		group models.PermissionGroup
+	)
+	if group, err = FirstPermissionGrp(app.Database.DB.Where("id = ?", entry.PermissionGrpId)); err != nil {
+		logrus.Error(err)
+		return false
+	}
+	if !*group.IsActive {
+		return false
+	}
+	if group.SelectAll != nil && *group.SelectAll {
+		return true
+	} // nếu SelectAll tồn tại và có giá trị true
+	var permissionIds []uuid.UUID
+	if err = json.Unmarshal(group.PermissionIds, &permissionIds); err != nil {
+		logrus.Error(err)
+		return false
+	}
+	// Tạo đối tượng truy vấn với điều kiện
+	query := app.Database.DB.Where(map[string]interface{}{
+		"deleted_at": nil,
+		"subject":    subject,
+		"action":     action,
+	}).Where("id IN (?)", permissionIds)
+
+	// Gọi hàm GetPermissionId với truy vấn đã tạo
+	if _, err = GetPermissionId(query); err == nil {
+		return true
+	}
+	return false
 }
