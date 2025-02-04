@@ -161,3 +161,28 @@ func HasPermission(entry models.User, subject, action string) bool {
 	}
 	return false
 }
+func HasPermission2(entry models.User, action string, subject ...string) bool {
+	var (
+		err   error
+		group models.PermissionGroup
+	)
+	if group, err = FirstPermissionGrp(app.Database.DB.Where("id = ?", entry.PermissionGrpId)); err != nil {
+		logrus.Error(err)
+		return false
+	}
+	if !*group.IsActive {
+		return false
+	}
+	if group.SelectAll != nil && *group.SelectAll {
+		return true
+	}
+	var permissionIds []uuid.UUID
+	if err = json.Unmarshal(group.PermissionIds, &permissionIds); err != nil {
+		logrus.Error(err)
+		return false
+	}
+	if _, err = GetPermissionId(app.Database.DB.Where("id IN ? AND subject IN ? AND action = ?", permissionIds, subject, action)); err == nil {
+		return true
+	}
+	return false
+}

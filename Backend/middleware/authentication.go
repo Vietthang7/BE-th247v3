@@ -89,3 +89,49 @@ func handleCheckAdminClaims(c *fiber.Ctx) error {
 		}
 	}
 }
+func Gate(Subject, Action string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if Subject == "" || Action == "" {
+			return c.Next()
+		}
+		if roleId, ok := c.Locals("role_id").(float64); ok {
+			if roleId == consts.Student {
+				return c.Next()
+			} else {
+				if user, ok := c.Locals("user").(models.User); ok {
+					if user.RoleId == consts.Root || user.RoleId == consts.CenterOwner {
+						return c.Next()
+					}
+					if repo.HasPermission(user, Subject, Action) {
+						return c.Next()
+					}
+				}
+			}
+		}
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+}
+
+// trả về một fiber.Handler (middleware), nghĩa là có thể được gắn vào các route trong Fiber.
+func Gate2(Action string, Subject ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if len(Subject) == 0 || Action == "" {
+			return c.Next()
+		}
+		if roleId, ok := c.Locals("role_id").(float64); ok {
+			if roleId == consts.Student {
+				return c.Next()
+			} else {
+				if user, ok := c.Locals("user").(models.User); ok {
+					if user.RoleId == consts.Root || user.RoleId == consts.CenterOwner {
+						return c.Next()
+					}
+					if repo.HasPermission2(user, Action, Subject...) {
+						return c.Next()
+					}
+				}
+			}
+		}
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+}
