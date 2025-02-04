@@ -72,6 +72,8 @@ func handleCheckAdminClaims(c *fiber.Ctx) error {
 		return c.Next()
 	} else {
 		user, row, err := repo.GetUserByID(user_id)
+		//jsonData, _ := json.MarshalIndent(user, "", "  ")
+		//fmt.Println(string(jsonData))
 		if err != nil || row < 1 {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Can not find user", "error": consts.GetFailed})
 		} else {

@@ -24,7 +24,7 @@ type User struct {
 	Position          int64      `json:"position,omitempty"` // internal/consts/role.go
 	RoleId            int64      `json:"role_id,omitempty"`
 	EmailVerified     bool       `json:"-" gorm:"default:false"`
-	CenterId          *uuid.UUID `gorm:"default:null" json:"-"`
+	CenterId          *uuid.UUID `gorm:"default:null" json:"center_id"`
 	BranchId          *uuid.UUID `json:"branch_id,omitempty"`
 	BranchName        string     `json:"branch_name,omitempty" gorm:"-"`
 	OrganStructId     *uuid.UUID `json:"organ_struct_id,omitempty"`

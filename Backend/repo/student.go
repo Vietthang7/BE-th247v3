@@ -8,7 +8,8 @@ import (
 )
 
 type (
-	Student models.Student
+	Student  models.Student
+	Students []*models.Student
 )
 
 func (u *Student) VerifyEmail(email string) error {
