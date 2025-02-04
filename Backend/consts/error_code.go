@@ -8,6 +8,7 @@ const (
 	UpdateFailed    = 1004 // Cập nhật dữ liệu lỗi
 	RegisterFailed  = 1007 // Đăng ký thất bại
 	DataNotFound    = 1005 // Không tìm thấy dữ liệu
+	Forbidden       = 1003 // Không có quyền thực hiện thao tác này
 	//public data
 	ERROR_INTERNAL_SERVER_ERROR = 6104 // Lỗi hệ thống
 	ERROR_EXPIRED_TIME          = 6105 // Dữ liệu không phù hợp
@@ -20,4 +21,5 @@ const (
 	//User
 	EmailDuplication    = 2000 // Lỗi tồn tại email
 	UsernameDuplication = 2002 // Lỗi tồn tại tên tài khoản
+	PhoneDuplication    = 2001 // Lỗi tồn tại số điện thoại
 )

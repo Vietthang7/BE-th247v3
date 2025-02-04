@@ -2,9 +2,12 @@ package repo
 
 import (
 	"context"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"intern_247/app"
+	"intern_247/consts"
 	"intern_247/models"
+	"intern_247/utils"
 )
 
 type (
@@ -76,4 +79,39 @@ func (u *Student) PreloadStudent(DB *gorm.DB, properties ...string) {
 			})
 		}
 	}
+}
+
+func (u *Student) Create() (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+
+	username := utils.GenerateUniqueUsername()
+	u.Username = username
+	if u.Type == consts.Official || u.Type == consts.Trial {
+		tx := app.Database.DB.WithContext(ctx).Begin() // transaction
+		if err = tx.Create(&u).Error; err != nil {
+			tx.Rollback()
+			return err
+		} // lưu thông tin vào bảng student
+		var (
+			pwd = app.Config("DEFAULT_PASSWORD")
+		)
+		temp, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+		loginInfo := LoginInfo{
+			ID:           u.ID,
+			CenterID:     u.CenterId,
+			Username:     username,
+			Phone:        u.Phone,
+			Email:        u.Email,
+			PasswordHash: string(temp),
+			RoleId:       consts.Student,
+			DeletedAt:    nil,
+		}
+		if err = loginInfo.Create(); err != nil {
+			tx.Rollback()
+			return err
+		}
+		return tx.Commit().Error
+	}
+	return app.Database.DB.WithContext(ctx).Model(&models.Student{}).Create(&u).Error
 }

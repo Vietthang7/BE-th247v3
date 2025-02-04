@@ -7,9 +7,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/models"
 	"time"
+)
+
+type (
+	User models.User
 )
 
 func VerifyUserEmail(email string) error {
@@ -185,4 +190,27 @@ func HasPermission2(entry models.User, action string, subject ...string) bool {
 		return true
 	}
 	return false
+}
+
+func (u *User) First(query interface{}, args []interface{}, preload ...string) error {
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+		DB          = app.Database.DB.WithContext(ctx).Where(query, args...)
+	)
+	defer cancel()
+	if len(preload) > 0 {
+		NewPreloadUser(DB, preload...)
+	}
+	return DB.First(&u).Error
+}
+func NewPreloadUser(DB *gorm.DB, properties ...string) {
+	for _, v := range properties {
+		if v == "Subjects" {
+			DB.Preload("Subjects", func(db *gorm.DB) *gorm.DB {
+				return db.Debug().Select("subjects.id", "subjects.name", "subjects.code").Joins("JOIN (SELECT s2.code, s2.name, MAX(updated_at) AS latest_updated_at FROM subjects as s2 WHERE s2.deleted_at IS NULL GROUP BY s2.code, s2.name) AS latest_subjects ON (subjects.code = latest_subjects.code OR subjects.name = latest_subjects.name) AND subjects.updated_at = latest_subjects.latest_updated_at")
+			})
+		}
+		//Truy vấn con (latest_subjects) lấy danh sách môn học có updated_at mới nhất.
+		//	JOIN với bảng subjects giúp lấy đúng bản ghi tương ứng, có thể là 1 hoặc nhiều bản ghi tùy vào dữ liệu trong bảng gốc.
+	}
 }
