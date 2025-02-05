@@ -2,12 +2,14 @@ package repo
 
 import (
 	"context"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/utils"
+
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type (
@@ -114,4 +116,35 @@ func (u *Student) Create() (err error) {
 		return tx.Commit().Error
 	}
 	return app.Database.DB.WithContext(ctx).Model(&models.Student{}).Create(&u).Error
+}
+func (u *Student) Update(origin Student, query interface{}, args []interface{}) (err error) {
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+		tx          = app.Database.DB.WithContext(ctx).Begin()
+	)
+	defer cancel()
+
+	if err = tx.Model(&models.Student{}).Where(query, args...).Updates(&u).Error; err != nil {
+		logrus.Error(err)
+		tx.Rollback()
+		return err
+	}
+
+	if err = app.Database.DB.WithContext(ctx).Model(&models.LoginInfo{}).Where("id = ?", u.ID).
+		Update("phone", u.Phone).Update("email", u.Email).Error; err != nil {
+		logrus.Error(err)
+		tx.Rollback()
+		return err
+	}
+
+	if !u.EmailVerified {
+		if err = tx.Model(&models.Student{}).Where(query, args...).
+			Update("EmailVerified", false).Error; err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }
