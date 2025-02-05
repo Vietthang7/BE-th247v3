@@ -1,8 +1,8 @@
 .env
-app/
 private_key.pem
 public_key.pem
 certificate.pem
 request.csr
 vendor/
 .idea/
+app/

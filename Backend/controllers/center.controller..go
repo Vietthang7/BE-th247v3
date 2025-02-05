@@ -11,6 +11,10 @@ import (
 )
 
 func CreateCenter(c *fiber.Ctx) error {
+	//user, ok := c.Locals("user").(*models.User)
+	//if !ok {
+	//	return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Permission denied!")
+	//}
 	var (
 		entry models.Center
 		err   error
@@ -20,12 +24,12 @@ func CreateCenter(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, err.Error())
 	}
 	//// check center is exists with user id
-	//_, err = repo.GetCenterIDByUserID(uuid.Nil) // Sử dụng `uuid.Nil` để bypass kiểm tra
+	//_, err = repo.GetCenterIDByUserID(user.ID)
 	////center is exists
 	//if err == nil {
 	//	return ResponseError(c, fiber.StatusConflict, consts.DataExists, "Duplicate center")
 	//}
-	//entry.UserId = nil // Không gán `UserId` nếu không có thông tin người dùng
+	//entry.UserId = &user.ID
 	if err = repo.CreateCenter(app.Database.DB, &entry); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError, consts.CreateFail, err.Error())

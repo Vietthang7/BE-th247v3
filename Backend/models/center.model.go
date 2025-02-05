@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
@@ -23,8 +24,8 @@ type Center struct {
 	Logo        string         `json:"logo,omitempty"`
 	Favicon     string         `json:"favicon,omitempty"`
 	CoverImg    string         `json:"cover_img,omitempty"`
-	Subjects    datatypes.JSON `json:"subjects,omitempty"` // Môn học
-	// UserId      *uuid.UUID     `gorm:"unique;default:null" json:"-"`            //id user owner
-	// User        *User          `gorm:"foreignKey:UserId" json:"user,omitempty"` //id user owner
-	Domain string `json:"domain,omitempty"`
+	Subjects    datatypes.JSON `json:"subjects,omitempty"`                      // Môn học
+	UserId      *uuid.UUID     `gorm:"unique;default:null" json:"-"`            //id user owner
+	User        *User          `gorm:"foreignKey:UserId" json:"user,omitempty"` //id user owner
+	Domain      string         `json:"domain,omitempty"`
 }
