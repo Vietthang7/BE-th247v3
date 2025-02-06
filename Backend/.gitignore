@@ -5,4 +5,3 @@ certificate.pem
 request.csr
 vendor/
 .idea/
-app/

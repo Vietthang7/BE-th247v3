@@ -7,9 +7,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 	"intern_247/app"
+	"intern_247/consts"
 	"intern_247/models"
 	"time"
+)
+
+type (
+	User models.User
 )
 
 func VerifyUserEmail(email string) error {
@@ -160,4 +166,128 @@ func HasPermission(entry models.User, subject, action string) bool {
 		return true
 	}
 	return false
+}
+func HasPermission2(entry models.User, action string, subject ...string) bool {
+	var (
+		err   error
+		group models.PermissionGroup
+	)
+	if group, err = FirstPermissionGrp(app.Database.DB.Where("id = ?", entry.PermissionGrpId)); err != nil {
+		logrus.Error(err)
+		return false
+	}
+	if !*group.IsActive {
+		return false
+	}
+	if group.SelectAll != nil && *group.SelectAll {
+		return true
+	}
+	var permissionIds []uuid.UUID
+	if err = json.Unmarshal(group.PermissionIds, &permissionIds); err != nil {
+		logrus.Error(err)
+		return false
+	}
+	if _, err = GetPermissionId(app.Database.DB.Where("id IN ? AND subject IN ? AND action = ?", permissionIds, subject, action)); err == nil {
+		return true
+	}
+	return false
+}
+
+func (u *User) First(query interface{}, args []interface{}, preload ...string) error {
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+		DB          = app.Database.DB.WithContext(ctx).Where(query, args...)
+	)
+	defer cancel()
+	if len(preload) > 0 {
+		NewPreloadUser(DB, preload...)
+	}
+	return DB.First(&u).Error
+}
+func NewPreloadUser(DB *gorm.DB, properties ...string) {
+	for _, v := range properties {
+		if v == "Subjects" {
+			DB.Preload("Subjects", func(db *gorm.DB) *gorm.DB {
+				return db.Debug().Select("subjects.id", "subjects.name", "subjects.code").Joins("JOIN (SELECT s2.code, s2.name, MAX(updated_at) AS latest_updated_at FROM subjects as s2 WHERE s2.deleted_at IS NULL GROUP BY s2.code, s2.name) AS latest_subjects ON (subjects.code = latest_subjects.code OR subjects.name = latest_subjects.name) AND subjects.updated_at = latest_subjects.latest_updated_at")
+			})
+		}
+		//Truy vấn con (latest_subjects) lấy danh sách môn học có updated_at mới nhất.
+		//	JOIN với bảng subjects giúp lấy đúng bản ghi tương ứng, có thể là 1 hoặc nhiều bản ghi tùy vào dữ liệu trong bảng gốc.
+	}
+}
+func CreateUser(entry *models.User, args map[string]interface{}) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	tx := app.Database.DB.WithContext(ctx).Begin()
+
+	if err = tx.Create(entry).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	pwd := args["password"].(string)
+	temp, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+	loginInfo := LoginInfo{
+		ID:           entry.ID,
+		CenterID:     *entry.CenterId,
+		Username:     entry.Username,
+		Phone:        entry.Phone,
+		Email:        entry.Email,
+		RoleId:       entry.RoleId,
+		PasswordHash: string(temp),
+		DeletedAt:    nil,
+	}
+	if err = loginInfo.Create(); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if entry.Position == consts.Teacher || entry.Position == consts.TeachingAssistant {
+		history := SalaryHistory{
+			UserID:     entry.ID,
+			Salary:     entry.Salary,
+			SalaryType: entry.SalaryType,
+			CenterID:   entry.CenterId,
+			BranchID:   entry.BranchId,
+			OrganID:    entry.OrganStructId,
+		}
+		now := time.Now()
+		history.CreatedAt = &now
+		if err = tx.Create(&history).Error; err != nil {
+			logrus.Error("Error while create salary history: ", err)
+		}
+	}
+	return tx.Commit().Error
+}
+func FindUsers(DB *gorm.DB) ([]models.User, error) {
+	var (
+		entries     []models.User
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	)
+	defer cancel()
+	err := DB.WithContext(ctx).Find(&entries)
+	return entries, err.Error
+}
+func PreloadUser(entry *models.User, properties ...string) {
+	for _, v := range properties {
+		if v == "organStructName" {
+			var (
+				err         error
+				organStruct models.OrganStruct
+			)
+			if organStruct, err = FirstOrganStruct(app.Database.DB.Where("id = ?", entry.OrganStructId).Select("name", "parent_id")); err != nil {
+				logrus.Error(err)
+			} else {
+				entry.OrganStructName = organStruct.Name
+			}
+
+		}
+	}
+}
+func CountUser(DB *gorm.DB) int64 {
+	var (
+		count       int64
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	)
+	defer cancel()
+	DB.Model(&models.User{}).WithContext(ctx).Count(&count)
+	return count
 }

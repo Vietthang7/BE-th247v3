@@ -24,7 +24,7 @@ type User struct {
 	Position          int64      `json:"position,omitempty"` // internal/consts/role.go
 	RoleId            int64      `json:"role_id,omitempty"`
 	EmailVerified     bool       `json:"-" gorm:"default:false"`
-	CenterId          *uuid.UUID `gorm:"default:null" json:"-"`
+	CenterId          *uuid.UUID `gorm:"default:null" json:"center_id"`
 	BranchId          *uuid.UUID `json:"branch_id,omitempty"`
 	BranchName        string     `json:"branch_name,omitempty" gorm:"-"`
 	OrganStructId     *uuid.UUID `json:"organ_struct_id,omitempty"`
@@ -37,6 +37,14 @@ type User struct {
 	Branch *Branch `json:"branch,omitempty"`
 	//OrganStruct       *OrganStruct `gorm:"foreignKey:OrganStructId" json:"organ_struct"`
 	OrganStruct *OrganStruct `json:"organ_struct,omitempty"`
+	SubjectIds  []*uuid.UUID `json:"subject_ids,omitempty" gorm:"-"`
+	Subjects    []*Subject   `json:"subjects,omitempty" gorm:"many2many:subject_teachers"`
+
+	ProvinceId *int64    `json:"province_id,omitempty"`
+	DistrictId *int64    `json:"district_id,omitempty"`
+	Province   *Province `json:"province,omitempty" gorm:"foreignKey:ProvinceId"`
+	District   *District `json:"district,omitempty" gorm:"foreignKey:DistrictId"`
+	Address    string    `json:"address,omitempty"`
 }
 
 type DataUserReturn struct {
@@ -59,20 +67,20 @@ type DataUserReturn struct {
 	RefreshToken string `json:"refresh_token"`
 }
 type CreateUserForm struct {
-	ExcelInd        int64       `json:"excel_ind"` //STT trong file excel
-	Avatar          string      `json:"avatar"`
-	FullName        string      `json:"full_name"`
-	Position        int64       `json:"position"` // Vai trò (1: Giảng Viên , 2 : Trợ giảng)
-	Email           string      `json:"email"`
-	Phone           string      `json:"phone"`
-	BranchId        *uuid.UUID  `json:"branch_id"`
-	OrganStructId   *uuid.UUID  `json:"organ_struct_id"`   // ID cơ cấu phân quyền tổ chức
-	PermissionGrpId *uuid.UUID  `json:"permission_grp_id"` // Id nhóm phân quyền
-	Username        string      `json:"username"`
-	Password        string      `json:"password"`
-	Introduction    string      `json:"introduction"` // Giới thiệu
-	IsActive        *bool       `json:"is_active"`
-	SalaryType      int64       `json:"salary_type"`
-	Salary          int64       `json:"salary"`
-	SubjectIds      []uuid.UUID `json:"subject_ids"`
+	ExcelInd        int64        `json:"excel_ind"` //STT trong file excel
+	Avatar          string       `json:"avatar"`
+	FullName        string       `json:"full_name"`
+	Position        int64        `json:"position"` // Vai trò (1: Giảng Viên , 2 : Trợ giảng)
+	Email           string       `json:"email"`
+	Phone           string       `json:"phone"`
+	BranchId        *uuid.UUID   `json:"branch_id"`
+	OrganStructId   *uuid.UUID   `json:"organ_struct_id"`   // ID cơ cấu phân quyền tổ chức
+	PermissionGrpId *uuid.UUID   `json:"permission_grp_id"` // Id nhóm phân quyền
+	Username        string       `json:"username"`
+	Password        string       `json:"password"`
+	Introduction    string       `json:"introduction"` // Giới thiệu
+	IsActive        *bool        `json:"is_active"`
+	SalaryType      int64        `json:"salary_type"`
+	Salary          int64        `json:"salary"`
+	SubjectIds      []*uuid.UUID `json:"subject_ids"`
 }
