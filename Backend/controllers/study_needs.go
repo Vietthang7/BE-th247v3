@@ -13,28 +13,40 @@ import (
 )
 
 func CreateStudyNeeds(c *fiber.Ctx) error {
+	// Lấy thông tin người dùng từ JWT token
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
 	}
+
 	var (
 		err   error
 		entry repo.StudyNeeds
 	)
 
+	// Parse dữ liệu từ request body
 	if err = c.BodyParser(&entry); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest,
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
 	}
 
+	// Kiểm tra xem student_id có tồn tại không
+	var student repo.Student
+	if err := app.Database.DB.Where("id = ?", entry.StudentId).First(&student).Error; err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy học viên")
+	}
+
+	// Nếu student_id hợp lệ, tiếp tục tạo StudyNeeds
 	entry.CenterId = *user.CenterId
 	if err = entry.Create(); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError,
 			fmt.Sprintf("%s: %s", consts.CreateFail, err.Error()), consts.CreateFailed)
 	}
-	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, nil)
+
+	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, entry)
 }
 
 func ReadStudyNeeds(c *fiber.Ctx) error {

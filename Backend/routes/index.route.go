@@ -11,4 +11,6 @@ func AdminRoutes(app *fiber.App) {
 	CenterRouter(admin)
 	AuthRoute(auth)
 	StudentNeedsRouter(admin)
+	StudentRouter(admin)
+	UserRouter(admin)
 }

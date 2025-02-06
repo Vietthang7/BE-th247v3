@@ -1,9 +1,10 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"intern_247/controllers"
 	mdw "intern_247/middleware"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func StudentRouter(student fiber.Router) {
