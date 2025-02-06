@@ -40,3 +40,9 @@ func (u *LoginInfo) Preload(DB *gorm.DB, properties ...string) {
 		}
 	}
 }
+
+func (u *LoginInfo) Update(query interface{}, args []interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	return app.Database.DB.WithContext(ctx).Where(query, args...).Updates(&u).Error
+}

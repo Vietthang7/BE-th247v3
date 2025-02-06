@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/helpers"
@@ -503,11 +505,104 @@ func ListUsers(c *fiber.Ctx) error {
 	})
 }
 
-//func ReadUser(c *fiber.Ctx) error {
-//	user, ok := c.Locals("user").(models.User)
-//	if !ok {
-//		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.Forbidden)
-//	}
-//	entry, err := repo.FirstUser("id = ? AND id <> ? "[]interface {}{c.Params("id"), user.ID}, "Subjects")
-//
-//}
+func ReadUser(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.Forbidden)
+	}
+	entry, err := repo.FirstUser("id = ? AND id <> ?",
+		[]interface{}{c.Params("id"), user.ID}, "Subjects") // Truy xuất user theo id, nhưng không cho phép user tự xem thông tin của chính họ.
+	switch {
+	case err == nil:
+		repo.PreloadUser(&entry, "organStructName", "permissionGrpName", "branchName")
+		return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, entry)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusNotFound, err.Error(), consts.DataNotFound)
+	default:
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.GetFailed)
+	}
+}
+
+func UpdateUser(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.Forbidden)
+	}
+	entry, err := repo.FirstUser("id = ? AND id <> ?", []interface{}{c.Params("id"), user.ID})
+	switch {
+	case err == nil:
+		origin := entry
+		if err = c.BodyParser(&entry); err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusBadRequest, err.Error(), consts.InvalidReqInput)
+		}
+		// data validation
+		var existence repo.LoginInfo
+		if err = existence.First("id <> ? AND (email = ? OR phone = ? username = ?)",
+			[]interface{}{entry.ID, entry.Email, entry.Phone, entry.Username}); err == nil {
+			var (
+				errExist     = ""
+				errExistCode []int
+			)
+			if entry.Email != "" && existence.Email == entry.Email {
+				errExist += "Email đã tồn tại."
+				errExistCode = append(errExistCode, consts.EmailDuplication)
+			}
+			if entry.Phone != "" && existence.Phone == entry.Phone {
+				errExist += "Phone đã tồn tại."
+				errExistCode = append(errExistCode, consts.PhoneDuplication)
+			}
+			if entry.Username != "" && existence.Username == entry.Username {
+				errExist += "Tên tài khoản đã tồn tại."
+				errExistCode = append(errExistCode, consts.UsernameDuplication)
+			}
+			return ResponseError(c, fiber.StatusConflict, errExist, errExistCode)
+		}
+		var student repo.Student
+		if err = student.First("id <> ? AND type NOT IN ? AND (email = ? OR phone = ? OR username = ?)",
+			[]interface{}{entry.ID, []int64{consts.Official, consts.Trial}, entry.Email, entry.Phone, entry.Username}); err == nil {
+			var (
+				errExist     = ""
+				errExistCode []int
+			)
+			if entry.Email != "" && student.Email == entry.Email {
+				errExist += "Email đã tồn tại."
+				errExistCode = append(errExistCode, consts.EmailDuplication)
+			}
+			if entry.Phone != "" && student.Phone == entry.Phone {
+				errExist += "Phone đã tồn tại."
+				errExistCode = append(errExistCode, consts.PhoneDuplication)
+			}
+			if entry.Username != "" && student.Username == entry.Username {
+				errExist += "Tên tài khoản đã tồn tại."
+				errExistCode = append(errExistCode, consts.UsernameDuplication)
+			}
+			return ResponseError(c, fiber.StatusConflict, errExist, errExistCode)
+		}
+		if origin.Position == consts.Teacher || origin.Position == consts.TeachingAssistant {
+			if entry.Position != origin.Position && repo.TeacherIsArranged(origin.ID) {
+				return ResponseError(c, fiber.StatusBadRequest,
+					"Nhân sự đã được gán dữ liệu. Không thể chỉnh sửa.", consts.UpdateUserHasDataLinked)
+			}
+		}
+		entry.Username = origin.Username // không cho phép đổi username
+		if entry.Subjects, err = repo.GetSubjectByIdsAndCenterId(entry.SubjectIds, *user.CenterId, nil); err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusInternalServerError,
+				fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
+		}
+		if err = repo.UpdateUser(&entry, origin, "id = ?", []interface{}{c.Params("id")}); err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.UpdateFailed)
+		}
+		return ResponseSuccess(c, fiber.StatusOK, consts.UpdateSuccess, entry)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusNotFound, err.Error(), consts.DataNotFound)
+	default:
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.GetFailed)
+	}
+}

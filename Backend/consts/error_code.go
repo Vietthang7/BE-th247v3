@@ -19,7 +19,8 @@ const (
 	SendOTPFailed      = 2007 // Lỗi gửi OTP
 	EmailIsNotVerified = 2008 // Tài khoản chưa xác thực email
 	//User
-	EmailDuplication    = 2000 // Lỗi tồn tại email
-	UsernameDuplication = 2002 // Lỗi tồn tại tên tài khoản
-	PhoneDuplication    = 2001 // Lỗi tồn tại số điện thoại
+	EmailDuplication        = 2000 // Lỗi tồn tại email
+	UsernameDuplication     = 2002 // Lỗi tồn tại tên tài khoản
+	PhoneDuplication        = 2001 // Lỗi tồn tại số điện thoại
+	UpdateUserHasDataLinked = 2003 // Nhân sự đã được gán dữ liệu. Không thể chỉnh sửa.
 )
