@@ -9,4 +9,5 @@ func AdminRoutes(app *fiber.App) {
 	CenterRouter(admin) // Call CenterRouter to register its routes
 	AuthRoute(auth)
 	StudentRouter(admin)
+	UserRouter(admin)
 }

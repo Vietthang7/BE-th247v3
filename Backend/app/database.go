@@ -198,6 +198,9 @@ func MigrateDatabase(DB *gorm.DB) error {
 	if err := DB.AutoMigrate(&models.PermissionGroup{}); err != nil {
 		logrus.Debug(err)
 	}
+	if err := DB.AutoMigrate(&models.SalaryHistory{}); err != nil {
+		logrus.Debug(err)
+	}
 
 	logrus.Info("Migrating finish")
 	return nil
