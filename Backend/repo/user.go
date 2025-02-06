@@ -291,3 +291,17 @@ func CountUser(DB *gorm.DB) int64 {
 	DB.Model(&models.User{}).WithContext(ctx).Count(&count)
 	return count
 }
+
+//func FirstUser(query interface{}, args []interface{}, preload ...string) (models.User, error) {
+//	var (
+//		entry       models.User
+//		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+//		DB          = app.Database.DB.WithContext(ctx).Where(query, args...)
+//	)
+//	defer cancel()
+//	if len(preload) > 0 {
+//		NewPreloadUser(DB, preload...)
+//	}
+//	err := DB.First(&entry)
+//	return entry, err.Error
+//}

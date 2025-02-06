@@ -502,3 +502,12 @@ func ListUsers(c *fiber.Ctx) error {
 		"pagination": pagination,
 	})
 }
+
+//func ReadUser(c *fiber.Ctx) error {
+//	user, ok := c.Locals("user").(models.User)
+//	if !ok {
+//		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.Forbidden)
+//	}
+//	entry, err := repo.FirstUser("id = ? AND id <> ? "[]interface {}{c.Params("id"), user.ID}, "Subjects")
+//
+//}
