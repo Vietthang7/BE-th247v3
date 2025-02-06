@@ -6,4 +6,7 @@ const (
 	CreateSuccess = "Tạo dữ liệu thành công!"
 	GetFail       = "Lấy dữ liệu lỗi"
 	DataExists    = "Dữ liệu đã tồn tại!"
+
+	GetSuccess    = "Lấy dữ liệu thành công!"
+	UpdateSuccess = "Cập nhật thành công!"
 )
