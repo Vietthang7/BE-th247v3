@@ -72,6 +72,8 @@ func handleCheckAdminClaims(c *fiber.Ctx) error {
 		return c.Next()
 	} else {
 		user, row, err := repo.GetUserByID(user_id)
+		//jsonData, _ := json.MarshalIndent(user, "", "  ")
+		//fmt.Println(string(jsonData))
 		if err != nil || row < 1 {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Can not find user", "error": consts.GetFailed})
 		} else {
@@ -87,5 +89,51 @@ func handleCheckAdminClaims(c *fiber.Ctx) error {
 			c.Locals("role_id", roleId)
 			return c.Next()
 		}
+	}
+}
+func Gate(Subject, Action string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if Subject == "" || Action == "" {
+			return c.Next()
+		}
+		if roleId, ok := c.Locals("role_id").(float64); ok {
+			if roleId == consts.Student {
+				return c.Next()
+			} else {
+				if user, ok := c.Locals("user").(models.User); ok {
+					if user.RoleId == consts.Root || user.RoleId == consts.CenterOwner {
+						return c.Next()
+					}
+					if repo.HasPermission(user, Subject, Action) {
+						return c.Next()
+					}
+				}
+			}
+		}
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+}
+
+// trả về một fiber.Handler (middleware), nghĩa là có thể được gắn vào các route trong Fiber.
+func Gate2(Action string, Subject ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if len(Subject) == 0 || Action == "" {
+			return c.Next()
+		}
+		if roleId, ok := c.Locals("role_id").(float64); ok {
+			if roleId == consts.Student {
+				return c.Next()
+			} else {
+				if user, ok := c.Locals("user").(models.User); ok {
+					if user.RoleId == consts.Root || user.RoleId == consts.CenterOwner {
+						return c.Next()
+					}
+					if repo.HasPermission2(user, Action, Subject...) {
+						return c.Next()
+					}
+				}
+			}
+		}
+		return c.SendStatus(fiber.StatusForbidden)
 	}
 }

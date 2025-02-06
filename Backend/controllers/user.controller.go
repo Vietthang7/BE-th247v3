@@ -13,6 +13,7 @@ import (
 	"intern_247/models"
 	"intern_247/repo"
 	"intern_247/utils"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -260,45 +261,6 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 
 	return ResponseSuccess(c, fiber.StatusOK, "Confirmed! Welcome", userReturn)
 }
-
-//	func VerifyToken(c *fiber.Ctx) error {
-//		type Input struct {
-//			Token string `json:"token"`
-//		}
-//		type MyCustomClaims struct {
-//			UserID string `json:"user_id"`
-//			jwt.RegisteredClaims
-//		}
-//		var (
-//			input                     Input
-//			claims                    *MyCustomClaims
-//			fullName, avatar          string
-//			branchId                  *uuid.UUID
-//			position                  int64
-//			loginInfo                 repo.LoginInfo
-//			userLogin, isVerifiedMail bool
-//		)
-//		if err := c.BodyParser(&input); err != nil {
-//			return c.JSON(fiber.Map{"status": false, "message": "Review your input", "error": err.Error(), "user": nil})
-//		}
-//		token, err := jwt.ParseWithClaims(input.Token, &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-//			return []byte(app.Config("SECRET_KEY")), nil
-//		})
-//		if err != nil {
-//			return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
-//		}
-//		ok := false
-//		if claims, ok := token.Claims.(*MyCustomClaims); !ok && !token.Valid {
-//			return ResponseError(c, fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
-//		}
-//		if errInfo := loginInfo.First("id = ?", []interface{}{claims.UserID}, "Student", "User"); errInfo != nil {
-//			return ResponseError(c,fiber.StatusInternalServerError, "verify", consts.ERROR_INTERNAL_SERVER_ERROR)
-//		}
-//		switch expr {
-//
-//		}
-//
-// }
 func Register(c *fiber.Ctx) error {
 	var (
 		err  error
@@ -391,3 +353,161 @@ func ResendOTP(c *fiber.Ctx) error {
 	}
 	return ResponseSuccess(c, fiber.StatusOK, "success", loginInfo.Email)
 }
+func CreateUser(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error permission denied!", consts.Forbidden)
+	}
+	var (
+		err  error
+		form models.CreateUserForm
+	)
+	if err = c.BodyParser(&form); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusBadRequest,
+			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
+	}
+	// data validation
+	var existence repo.LoginInfo
+	if err = existence.First("email = ? OR phone = ? OR username = ?", []interface{}{form.Email, form.Phone, form.Username}); err == nil {
+		var (
+			errExist     = ""
+			errExistCode []int
+		)
+		if form.Email != "" && existence.Email == form.Email {
+			errExist += "Email existed"
+			errExistCode = append(errExistCode, consts.EmailDuplication)
+		}
+		if form.Phone != "" && existence.Phone == form.Phone {
+			errExist += "Số điện thoại đã tồn tại."
+			errExistCode = append(errExistCode, consts.PhoneDuplication)
+		}
+		if form.Username != "" && existence.Username == form.Username {
+			errExist += "Tên tài khoản đã tồn tại."
+			errExistCode = append(errExistCode, consts.UsernameDuplication)
+		}
+	}
+	var student repo.Student
+	if err = student.First("type NOT IN ? AND (email = ? OR phone = ? OR username = ?)",
+		[]interface{}{[]int64{consts.Official, consts.Trial}, form.Email, form.Phone, form.Username}); err == nil {
+		var (
+			errExist     = ""
+			errExistCode []int
+		)
+		if student.Email == form.Email {
+			errExist += "Email đã tồn tại."
+			errExistCode = append(errExistCode, consts.EmailDuplication)
+		}
+		if student.Phone == form.Phone {
+			errExist += "Số điện thoại đã tồn tại."
+			errExistCode = append(errExistCode, consts.PhoneDuplication)
+		}
+		if student.Username == form.Username {
+			errExist += "Tên tài khoản đã tồn tại."
+			errExistCode = append(errExistCode, consts.UsernameDuplication)
+		}
+		return ResponseError(c, fiber.StatusConflict, errExist, errExistCode)
+	}
+	// Create user
+	entry := models.User{
+		Avatar:          form.Avatar,
+		FullName:        form.FullName,
+		Username:        form.Username,
+		Email:           form.Email,
+		Phone:           form.Phone,
+		Position:        form.Position,
+		BranchId:        form.BranchId,
+		OrganStructId:   form.OrganStructId,
+		PermissionGrpId: form.PermissionGrpId,
+		Introduction:    form.Introduction,
+		IsActive:        form.IsActive,
+		Salary:          form.Salary,
+		SalaryType:      form.SalaryType,
+		CenterId:        user.CenterId,
+		RoleId:          consts.CenterHR,
+	}
+	if len(form.SubjectIds) > 0 {
+		if entry.Subjects, err = repo.GetSubjectByIdsAndCenterId(form.SubjectIds, *user.CenterId, nil); err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.CreateFailed)
+		}
+	}
+	args := map[string]interface{}{"password": form.Password}
+	if err = repo.CreateUser(&entry, args); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.CreateFailed)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, entry.ID)
+}
+func ListUsers(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied!", consts.Forbidden)
+	}
+	var (
+		err        error
+		entries    []models.User
+		pagination = consts.BindRequestTable(c, "created_at")
+		DB         = pagination.CustomOptions(app.Database.DB)
+	)
+	DB = DB.Where(map[string]interface{}{
+		"center_id": user.CenterId,
+		"role_id":   consts.CenterHR,
+	}).Omit("phone", "email", "updated_at", "role_id").Order("full_name asc")
+	if user.BranchId != nil && c.Query("allBranch") != "true" {
+		DB = DB.Where("branch_id = ?", user.BranchId)
+	}
+	if pagination.Search != "" {
+		DB = DB.Where("fullname LIKE ?", "%"+pagination.Search+"%")
+	}
+	if c.Query("organ_struct") != "" {
+		if id, errId := uuid.Parse(c.Query("organ_struct")); errId != nil {
+			logrus.Error("Failed to parse organ_struct UUID:", errId)
+		} else {
+			DB = DB.Where("organ_struct_id = ?", id)
+		}
+	}
+	if c.Query("branch") != "" {
+		if id, errId := uuid.Parse(c.Query("branch")); errId != nil {
+			logrus.Error("Failed to parse branch UUID:", errId)
+		} else {
+			DB = DB.Where("branch_id = ?", id)
+		}
+	}
+	if c.Query("permission_grp") != "" {
+		if id, errId := uuid.Parse(c.Query("permission_grp")); errId != nil {
+			logrus.Error("Failed to parse permission_grp UUID:", errId)
+		} else {
+			DB = DB.Where("permission_grp_id = ?", id)
+		}
+	}
+	if c.Query("active") != "" {
+		isActive, _ := strconv.ParseBool(c.Query("active")) //Chuyển giá trị active từ chuỗi ("true"/"false") thành bool (true/false).
+		DB = DB.Where("is_active = ?", isActive)
+	}
+	if c.Query("position") != "" {
+		position, _ := strconv.Atoi(c.Query("position")) //Chuyển giá trị position từ chuỗi thành int.
+		DB = DB.Where("position = ?", position)
+	}
+	if entries, err = repo.FindUsers(DB); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.GetFailed)
+	}
+	for i := range entries {
+		repo.PreloadUser(&entries[i], "organStructName", "permissionGrpName", "branchName")
+	}
+	pagination.Total = repo.CountUser(DB.Where("center_id = ?", user.CenterId).Offset(-1))
+	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
+		"data":       entries,
+		"pagination": pagination,
+	})
+}
+
+//func ReadUser(c *fiber.Ctx) error {
+//	user, ok := c.Locals("user").(models.User)
+//	if !ok {
+//		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.Forbidden)
+//	}
+//	entry, err := repo.FirstUser("id = ? AND id <> ? "[]interface {}{c.Params("id"), user.ID}, "Subjects")
+//
+//}
