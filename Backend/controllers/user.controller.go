@@ -87,7 +87,7 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 		//"sso_id":  &loginInfo.SsoID,
 		"role":   roleData,
 		"status": true,
-		"exp":    time.Now().Add(time.Hour * 72).Unix(),
+		"exp":    time.Now().Add(time.Hour * 200).Unix(),
 	}
 	claims_refresh := jwt.MapClaims{
 		"user_id": loginInfo.ID,
@@ -218,7 +218,7 @@ func VerifyEmailOTP(c *fiber.Ctx) error {
 		"site_id":   loginInfo.CenterID,
 		//"sso_id":    loginInfo.SsoID,
 		"status": true,
-		"exp":    time.Now().Add(time.Hour * 72).Unix(),
+		"exp":    time.Now().Add(time.Hour * 200).Unix(),
 	}
 	refreshClaims := jwt.MapClaims{
 		"user_id":   loginInfo.ID,
@@ -310,6 +310,7 @@ func Register(c *fiber.Ctx) error {
 }
 
 func ResendOTP(c *fiber.Ctx) error {
+	fmt.Println("ok")
 	type EmailInput struct {
 		Email string `json:"email"`
 	}
@@ -322,16 +323,16 @@ func ResendOTP(c *fiber.Ctx) error {
 	}
 	ok := utils.EmailValid(input.Email)
 	if !ok {
-		return ResponseError(c, fiber.StatusBadRequest, "Failed", consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Failed2", consts.InvalidReqInput)
 	}
 	var loginInfo repo.LoginInfo
 	if err = loginInfo.First("email = ?", []interface{}{input.Email}); err != nil {
 		logrus.Error(err)
-		return ResponseError(c, fiber.StatusInternalServerError, "Failed", consts.GetFailed)
+		return ResponseError(c, fiber.StatusInternalServerError, "Failed3", consts.GetFailed)
 	}
-	if _, err = repo.GetNewestOTPLogByReceiver(input.Email); err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, "Failed", consts.DataNotFound)
-	}
+	//if _, err = repo.GetNewestOTPLogByReceiver(input.Email); err != nil {
+	//	return ResponseError(c, fiber.StatusBadRequest, "Failed4", consts.DataNotFound)
+	//}
 	var emailInfo helpers.EmailSchema
 	emailInfo.Title = helpers.EmailVerifyTitle
 	emailInfo.Content = helpers.EmailVerifyContent
@@ -605,4 +606,33 @@ func UpdateUser(c *fiber.Ctx) error {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.GetFailed)
 	}
+}
+func ForgotPwd(c *fiber.Ctx) error {
+	var (
+		err error
+	)
+	type PwdForgotForm struct {
+		Email  string `json:"email"`
+		NewPwd string `json:"new_pwd"`
+	}
+	var form PwdForgotForm
+	if err = c.BodyParser(&form); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusBadRequest, fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
+	}
+	if form.NewPwd == "" {
+		return ResponseError(c, fiber.StatusBadRequest, "Error empty password!", consts.InvalidReqInput)
+	}
+	var loginInfo repo.LoginInfo
+	if err = loginInfo.First("email = ?", []interface{}{form.Email}); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError,
+			fmt.Sprintf("Error can't find the login info: %s", err.Error()), consts.DataNotFound)
+	}
+	if err = loginInfo.PwdChanging("", form.NewPwd); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError,
+			fmt.Sprintf("%s: %s", consts.UpdateFail, err.Error()), consts.UpdateFailed)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "Đổi mật khẩu thành công!", nil)
 }
