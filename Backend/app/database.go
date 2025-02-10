@@ -2,14 +2,15 @@ package app
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"intern_247/models"
 	"log"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const CTimeOut = 10 * time.Second
@@ -201,7 +202,9 @@ func MigrateDatabase(DB *gorm.DB) error {
 	if err := DB.AutoMigrate(&models.SalaryHistory{}); err != nil {
 		logrus.Debug(err)
 	}
-
+	if err := DB.AutoMigrate(&models.DocsCategory{}); err != nil {
+		logrus.Debug(err)
+	}
 	logrus.Info("Migrating finish")
 	return nil
 }

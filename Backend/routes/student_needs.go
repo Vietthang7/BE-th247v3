@@ -12,12 +12,13 @@ func StudentNeedsRouter(student fiber.Router) {
 	student.Use(mdw.AdminAuthentication)
 
 	// Nhu cầu học tập - Học viên
-	student.Post("/study-needs", controllers.CreateStudyNeeds)
+	student.Post("/study-needs", mdw.Gate2("create", "student", "potential-student", "trial-student"), controllers.CreateStudyNeeds)
+	student.Get("/list-study-needs", mdw.Gate2("read", "student", "potential-student", "trial-student"), controllers.ReadStudyNeeds)
+	student.Get("/study-needs/:student_id", mdw.Gate2("read", "student", "potential-student", "trial-student"), controllers.ReadStudyNeeds)
+	student.Put("/study-needs/:student_id", mdw.Gate2("update", "student", "potential-student", "trial-student"), controllers.UpdateStudyNeeds)
+
 	// student.Get("/list-study-needs", controllers.ReadStudyNeeds)
 	// student.Get("/study-needs/:student_id", controllers.GetStudyNeedsByStudentID)
-	student.Get("/list-study-needs", controllers.ReadStudyNeeds)
-	student.Get("/study-needs/:student_id", controllers.ReadStudyNeeds)
-	student.Put("/study-needs/:student_id", controllers.UpdateStudyNeeds)
 
 	// admin.Put("/study-needs/:studentId", mdw.Gate2("update", "student", "potential-student", "trial-student"), controllers.UpdateStudyNeeds)
 
