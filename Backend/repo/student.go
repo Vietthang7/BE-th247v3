@@ -2,11 +2,13 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/utils"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -147,4 +149,65 @@ func (u *Student) Update(origin Student, query interface{}, args []interface{}) 
 	}
 
 	return tx.Commit().Error
+}
+
+func (u *Student) Count(DB *gorm.DB) (count int64) {
+	var ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	DB.Model(&models.Student{}).WithContext(ctx).Count(&count)
+	return
+}
+
+func (u *Student) Find(DB *gorm.DB, preload ...string) (Students, error) {
+	var (
+		entries     Students
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	)
+	defer cancel()
+
+	if len(preload) > 0 {
+		u.PreloadStudent(DB, preload...)
+	}
+
+	err := DB.WithContext(ctx).Model(&models.Student{}).Find(&entries)
+	return entries, err.Error
+}
+
+func PreloadTotalTrialSession(entry *models.Student) {
+	var ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	app.Database.DB.WithContext(ctx).Where("student_id = ?", entry.ID).
+		Model(&models.StudentSession{}).Count(&entry.TotalTrialSession)
+}
+
+func LoadCareResult(studentId uuid.UUID) (result string) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	app.Database.DB.WithContext(ctx).Raw("SELECT cs.`name` FROM `care_infos` ci\n"+
+		"JOIN care_results cs ON cs.id = ci.result_id\n"+
+		"WHERE ci.student_id = ? AND ci.deleted_at IS NULL\n"+
+		"ORDER BY ci.created_at DESC\nLIMIT 1", studentId).Scan(&result)
+	return
+}
+
+func (u *Student) PreloadCompletedSubject(studentId uuid.UUID) string {
+	var ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	var result struct {
+		Completed string `json:"completed"`
+		Total     string `json:"total"`
+	}
+
+	if err := app.Database.DB.WithContext(ctx).Raw("WITH t1 AS (\n"+
+		"SELECT COUNT(*) FROM `student_subjects`\n"+
+		"WHERE student_id = ?), t2 AS (\n"+
+		"SELECT COUNT(c.id) FROM `student_classes` sc\n"+
+		"JOIN classes c ON c.id = sc.class_id\n"+
+		"WHERE sc.student_id = ? AND c.end_at <= NOW() AND c.deleted_at IS NULL)\n\n"+
+		"SELECT (SELECT * FROM t2) completed, (SELECT * FROM t1) total", studentId, studentId).
+		Scan(&result).Error; err != nil {
+		logrus.Error(err)
+	}
+
+	return fmt.Sprintf("%s/%s", result.Completed, result.Total)
 }

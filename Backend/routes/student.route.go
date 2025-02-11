@@ -14,4 +14,5 @@ func StudentRouter(student fiber.Router) {
 	student.Post("/students", mdw.Gate2("create", "student", "potential-student", "trial-student"), controllers.CreateStudent)
 	student.Get("/students/:id", mdw.Gate2("read", "student", "potential-student", "trial-student"), controllers.ReadStudent)
 	student.Put("/students/:id", mdw.Gate2("update", "student", "potential-student", "trial-student"), controllers.UpdateStudent)
+	student.Get("/students", mdw.Gate2("list", "student", "potential-student", "trial-student"), controllers.ListStudents)
 }

@@ -3,12 +3,6 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/helpers"
@@ -18,6 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func NewLoginGetToken(c *fiber.Ctx) error {
@@ -635,4 +636,70 @@ func ForgotPwd(c *fiber.Ctx) error {
 			fmt.Sprintf("%s: %s", consts.UpdateFail, err.Error()), consts.UpdateFailed)
 	}
 	return ResponseSuccess(c, fiber.StatusOK, "Đổi mật khẩu thành công!", nil)
+}
+
+func DeleteUser(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error unauthorized!", consts.ERROR_UNAUTHORIZED)
+	}
+
+	var (
+		err    error
+		reqIds models.ReqIds
+	)
+
+	if err = c.BodyParser(&reqIds); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusBadRequest, err.Error(), consts.InvalidReqInput)
+	}
+
+	if len(reqIds.Ids) < 1 {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusBadRequest, "Error length of ids < 1", consts.InvalidReqInput)
+	}
+
+	var users []models.User
+	if users, err = repo.NewFindUsers("id IN (?) AND id <> ?", []interface{}{reqIds.Ids, user.ID}); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.DeletedFailed)
+	} else if len(users) < 1 {
+		return ResponseError(c, fiber.StatusNotFound,
+			"Can't find any users by requirement", consts.DeletedFailed)
+	}
+
+	var (
+		teacherIds, otherPosIds []uuid.UUID
+		entry                   repo.User
+	)
+
+	for _, v := range users {
+		if v.Position == consts.Teacher || v.Position == consts.TeachingAssistant {
+			if repo.TeacherIsArranged(v.ID) {
+				return ResponseError(c, fiber.StatusBadRequest,
+					fmt.Sprintf("Nhân sự %s đã được phân công giảng dạy. Không thể xóa.", v.FullName),
+					consts.UserIsArranged)
+			}
+			teacherIds = append(teacherIds, v.ID)
+		} else {
+			otherPosIds = append(otherPosIds, v.ID)
+		}
+	}
+
+	if err = entry.Delete(teacherIds, otherPosIds); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.DeletedFailed)
+	}
+
+	// jobrunner.Now(repo.DeleteCasdoorUsers{IDs: append(teacherIds, otherPosIds...)})
+
+	//if len(users) > 0 {
+	//	for _, v := range users {
+	//		if _, err = DeleteCasdoorUser(v.Email, v.Phone, v.Username); err != nil {
+	//			logrus.Error(err)
+	//		}
+	//	}
+	//}
+
+	return ResponseSuccess(c, fiber.StatusOK, consts.DeleteSuccess, nil)
 }

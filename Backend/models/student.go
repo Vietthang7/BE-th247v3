@@ -87,3 +87,9 @@ type StudentSchedule struct {
 	StudyShifts []Shift      `json:"-" gorm:"foreignKey:ScheduleId"`
 	ShortShifts []ShortShift `json:"short_shifts" gorm:"-"`
 }
+
+type StudentSession struct {
+	StudentId uuid.UUID `json:"student_id" gorm:"not null"`
+	SessionId uuid.UUID `json:"session_id" gorm:"not null"`
+	ClassId   uuid.UUID `json:"class_id" gorm:"not null"`
+}
