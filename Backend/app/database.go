@@ -205,6 +205,10 @@ func MigrateDatabase(DB *gorm.DB) error {
 	if err := DB.AutoMigrate(&models.DocsCategory{}); err != nil {
 		logrus.Debug(err)
 	}
+	if err := DB.AutoMigrate(&models.TeachingSchedule{}); err != nil {
+		logrus.Debug(err)
+	}
+
 	logrus.Info("Migrating finish")
 	return nil
 }
