@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"intern_247/app"
+	"intern_247/consts"
+	"intern_247/models"
+	"intern_247/utils"
+	"time"
+
+	"github.com/bamzi/jobrunner"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"intern_247/app"
-	"intern_247/consts"
-	"intern_247/models"
-	"time"
 )
 
 type (
@@ -292,16 +295,126 @@ func CountUser(DB *gorm.DB) int64 {
 	return count
 }
 
-//func FirstUser(query interface{}, args []interface{}, preload ...string) (models.User, error) {
-//	var (
-//		entry       models.User
-//		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
-//		DB          = app.Database.DB.WithContext(ctx).Where(query, args...)
-//	)
-//	defer cancel()
-//	if len(preload) > 0 {
-//		NewPreloadUser(DB, preload...)
-//	}
-//	err := DB.First(&entry)
-//	return entry, err.Error
-//}
+func FirstUser(query interface{}, args []interface{}, preload ...string) (models.User, error) {
+	var (
+		entry       models.User
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+		DB          = app.Database.DB.WithContext(ctx).Where(query, args...)
+	)
+	defer cancel()
+	if len(preload) > 0 {
+		NewPreloadUser(DB, preload...)
+	}
+	err := DB.First(&entry)
+	return entry, err.Error
+}
+
+func UpdateUser(entry *models.User, origin models.User, query interface{}, args []interface{}) (err error) {
+	var (
+		ctx, cancel     = context.WithTimeout(context.Background(), app.CTimeOut)
+		tx              = app.Database.DB.WithContext(ctx).Begin()
+		teacherPosition = []int64{consts.Teacher, consts.TeachingAssistant}
+	)
+	defer cancel()
+	if origin.Salary != entry.Salary || origin.SalaryType != entry.SalaryType {
+		if utils.Contains(teacherPosition, entry.Position) && utils.Contains(teacherPosition, origin.Position) {
+			var VietNamTZ *time.Location
+			VietNamTZ, err = time.LoadLocation("Asia/Ho_Chi_Minh")
+			if err != nil {
+				logrus.Error(err)
+				tx.Rollback()
+				return err
+			}
+			next24hour := time.Now().AddDate(0, 0, 1)
+			tomorrow := time.Date(next24hour.Year(), next24hour.Month(), next24hour.Day(), 0, 5, 0, 0, VietNamTZ)
+			jobrunner.In(tomorrow.Sub(time.Now()), UpdateSalary{
+				UserId:     entry.ID,
+				CenterId:   entry.CenterId,
+				BranchId:   entry.BranchId,
+				OrganID:    entry.OrganStructId,
+				Salary:     entry.Salary,
+				SalaryType: entry.SalaryType,
+			})
+		}
+	} else if utils.Contains(teacherPosition, entry.Position) {
+		history := SalaryHistory{
+			UserID:     entry.ID,
+			SalaryType: entry.SalaryType,
+			Salary:     entry.Salary,
+			CenterID:   entry.CenterId,
+			BranchID:   entry.BranchId,
+			OrganID:    entry.OrganStructId,
+		}
+		now := time.Now()
+		history.CreatedAt = &now
+		if err = tx.Create(&history).Error; err != nil {
+			logrus.Error("Error while create salary history: ", err)
+			tx.Rollback()
+		}
+	}
+	if entry.OrganStructId != origin.OrganStructId && entry.OrganStructId == nil {
+		if err = tx.Where(query, args...).Model(&models.User{}).Update("organ_struct_id", nil).Error; err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+	}
+	if err = tx.Where(query, args...).Updates(&entry).Error; err != nil {
+		logrus.Error(err)
+		tx.Rollback()
+		return err
+	}
+	loginInfo := LoginInfo{
+		Username: entry.Username,
+		Phone:    entry.Phone,
+		Email:    entry.Email,
+	}
+	if err = loginInfo.Update("id = ?", []interface{}{entry.ID}); err != nil {
+		logrus.Error(err)
+		tx.Rollback()
+		return err
+	}
+	if err = tx.Model(entry).Association("Subjects").Replace(entry.Subjects); err != nil {
+		logrus.Error(err)
+		tx.Rollback()
+		return err
+	}
+	if entry.BranchId == nil {
+		if err = tx.Model(&models.User{}).Where(query, args...).Update("BranchId", nil).Error; err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if !entry.EmailVerified {
+		if err = tx.Model(&models.User{}).Where(query, args...).
+			Update("EmailVerified", false).Error; err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+	}
+	// Nếu xóa vị trí => xóa lịch dạy của người dùng
+	if utils.Contains(teacherPosition, entry.Position) && !utils.Contains(teacherPosition, entry.Position) {
+		if err = app.Database.DB.WithContext(ctx).Where("user_id = ?", entry.ID).
+			Delete(&models.TeachingSchedule{}).Error; err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+
+		if err = TsDeleteTimeSlot(app.Database.DB.WithContext(ctx).Where("user_id = ?", entry.ID)); err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+
+		if err = TsDeleteShift(app.Database.DB.WithContext(ctx).Where("user_id = ?", entry.ID)); err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit().Error
+}

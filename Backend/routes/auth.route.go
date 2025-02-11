@@ -7,11 +7,12 @@ import (
 
 func AuthRoute(auth fiber.Router) {
 	auth.Post("/login", controllers.NewLoginGetToken)
+	auth.Post("/forgot", controllers.ForgotPwd)
 	//verify email
 	auth.Post("/verify_email", controllers.VerifyEmailOTP)
 	//auth.Post("/verify_token",)
 	auth.Post("/register", controllers.Register)
 	//resend otp
-	auth.Post("/resend-otp", controllers.ResendOTP)
+	auth.Post("/send-otp", controllers.ResendOTP)
 
 }

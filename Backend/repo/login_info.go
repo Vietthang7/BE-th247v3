@@ -2,6 +2,8 @@ package repo
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/models"
@@ -39,4 +41,26 @@ func (u *LoginInfo) Preload(DB *gorm.DB, properties ...string) {
 			})
 		}
 	}
+}
+
+func (u *LoginInfo) Update(query interface{}, args []interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	return app.Database.DB.WithContext(ctx).Where(query, args...).Updates(&u).Error
+}
+
+func (u *LoginInfo) PwdChanging(oldPwd, newPwd string) (err error) {
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+		tx          = app.Database.DB.WithContext(ctx).Begin()
+	)
+	defer cancel()
+	temp, _ := bcrypt.GenerateFromPassword([]byte(newPwd), bcrypt.DefaultCost)
+	if err = tx.Model(&models.LoginInfo{}).Where("id = ?", u.ID).
+		Update("password_hash", string(temp)).Error; err != nil {
+		logrus.Error(err)
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
