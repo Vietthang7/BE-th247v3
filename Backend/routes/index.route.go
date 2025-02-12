@@ -14,4 +14,5 @@ func AdminRoutes(app *fiber.App) {
 	StudentRouter(admin)
 	UserRouter(admin)
 	DocsCategoriesRouter(admin)
+	Notification(admin)
 }
