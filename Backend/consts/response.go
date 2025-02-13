@@ -8,6 +8,8 @@ const (
 	CreateSuccess = "Tạo dữ liệu thành công!"
 	GetFail       = "Lấy dữ liệu lỗi"
 	DataExists    = "Dữ liệu đã tồn tại!"
-	UpdateSuccess = "Cập nhật dữ liệu thành công!"
+	UpdateSuccess = "Cập nhật thành công!"
 	UpdateFail    = "Cập nhật dữ liệu lỗi"
+	DeleteFail    = "Xóa dữ liệu lỗi"
+	DeleteSuccess = "Xóa dữ liệu thành công!"
 )
