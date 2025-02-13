@@ -419,10 +419,14 @@ func UpdateUser(entry *models.User, origin models.User, query interface{}, args 
 	return tx.Commit().Error
 }
 
-func DeleteUser(query interface{}, args []interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+func NewFindUsers(query interface{}, args []interface{}) ([]models.User, error) {
+	var (
+		entries     []models.User
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	)
 	defer cancel()
-	return app.Database.DB.WithContext(ctx).Where(query, args...).Delete(&models.User{}).Error
+	err := app.Database.DB.WithContext(ctx).Where(query, args...).Find(&entries)
+	return entries, err.Error
 }
 
 func (u *User) Delete(teacherIds, otherPosIds []uuid.UUID) (err error) {
@@ -431,14 +435,12 @@ func (u *User) Delete(teacherIds, otherPosIds []uuid.UUID) (err error) {
 		DB          = app.Database.DB.WithContext(ctx)
 	)
 	defer cancel()
-
 	if len(teacherIds) < 1 {
 		tx := DB.Begin()
 		if err = tx.Error; err != nil {
 			logrus.Error(err)
 			return err
 		}
-
 		if err = tx.Where("id IN (?)", otherPosIds).Delete(&models.User{}).Error; err != nil {
 			logrus.Error(err)
 			tx.Rollback()
@@ -449,7 +451,6 @@ func (u *User) Delete(teacherIds, otherPosIds []uuid.UUID) (err error) {
 			tx.Rollback()
 			return err
 		}
-
 		return tx.Commit().Error
 	} else {
 		tx := DB.Begin()
@@ -457,7 +458,6 @@ func (u *User) Delete(teacherIds, otherPosIds []uuid.UUID) (err error) {
 			logrus.Error(err)
 			return err
 		}
-
 		if err = tx.Where("id IN (?)", append(otherPosIds, teacherIds...)).Delete(&models.User{}).Error; err != nil {
 			logrus.Error(err)
 			tx.Rollback()
@@ -486,14 +486,4 @@ func (u *User) Delete(teacherIds, otherPosIds []uuid.UUID) (err error) {
 
 		return tx.Commit().Error
 	}
-}
-
-func NewFindUsers(query interface{}, args []interface{}) ([]models.User, error) {
-	var (
-		entries     []models.User
-		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
-	)
-	defer cancel()
-	err := app.Database.DB.WithContext(ctx).Where(query, args...).Find(&entries)
-	return entries, err.Error
 }
