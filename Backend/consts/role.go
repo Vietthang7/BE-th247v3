@@ -19,3 +19,31 @@ const (
 const (
 	USER_ROOT = "root"
 )
+const PermissionsGoingWith = `{
+            "create": [
+                "list",
+                "read",
+                "update",
+                "delete",
+                "print"
+            ],
+            "update": [
+                "list",
+                "read",
+                "print",
+                "delete"
+            ],
+            "delete": [
+                "list",
+                "read"
+            ],
+            "read": [
+                "list"
+            ],
+            "import": [
+                "create",
+                "list",
+                "delete",
+                "update"
+            ]
+        }`

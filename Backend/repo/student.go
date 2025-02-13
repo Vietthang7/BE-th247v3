@@ -211,3 +211,25 @@ func (u *Student) PreloadCompletedSubject(studentId uuid.UUID) string {
 
 	return fmt.Sprintf("%s/%s", result.Completed, result.Total)
 }
+func (u *Student) Delete(studentIds []uuid.UUID) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	return app.Database.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		//jobrunner.Now(DeleteCasdoorUsers{IDs: studentIds})
+
+		if err = tx.Where("id IN ?", studentIds).Delete(&models.Student{}).Error; err != nil {
+			logrus.Error(err)
+			return err
+		}
+		if err = tx.Where("id IN ?", studentIds).Delete(&models.LoginInfo{}).Error; err != nil {
+			logrus.Error(err)
+			return err
+		}
+		if err = tx.Where("student_id IN ?", studentIds).Delete(&models.StudyNeeds{}).Error; err != nil {
+			logrus.Error(err)
+			return err
+		}
+
+		return nil
+	})
+}

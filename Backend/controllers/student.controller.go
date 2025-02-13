@@ -346,3 +346,29 @@ func ListStudents(c *fiber.Ctx) error {
 		"status":     status,
 	})
 }
+func DeleteStudent(c *fiber.Ctx) error {
+	var (
+		err   error
+		entry repo.Student
+		input models.ReqInputIds
+	)
+	if err = c.BodyParser(&input); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusBadRequest,
+			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
+	}
+	for _, studentId := range input.Ids {
+		var count int64
+		app.Database.DB.Model(&models.StudentClasses{}).Where("student_id = ?", studentId).Count(&count)
+		if count > 0 {
+			return ResponseError(c, fiber.StatusInternalServerError,
+				fmt.Sprintf("%s: %s", studentId, consts.ERROR_STUDENT_HAS_ASSIGNED), consts.ERROR_STUDENT_HAS_ASSIGNED)
+		}
+	}
+	if err = entry.Delete(input.Ids); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError,
+			fmt.Sprintf("%s: %s", consts.DeleteFail, err.Error()), consts.DeletedFailed)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, consts.DeleteSuccess, nil)
+}

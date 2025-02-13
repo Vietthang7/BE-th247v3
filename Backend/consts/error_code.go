@@ -10,7 +10,6 @@ const (
 	DataNotFound    = 1005 // Không tìm thấy dữ liệu
 	Forbidden       = 1003 // Không có quyền thực hiện thao tác này
 	DeletedFailed   = 1006 // Xóa dữ liệu lỗi
-
 	//public data
 	ERROR_INTERNAL_SERVER_ERROR = 6104 // Lỗi hệ thống
 	ERROR_EXPIRED_TIME          = 6105 // Dữ liệu không phù hợp
@@ -33,4 +32,6 @@ const (
 	PhoneDuplication        = 2001 // Lỗi tồn tại số điện thoại
 	UpdateUserHasDataLinked = 2003 // Nhân sự đã được gán dữ liệu. Không thể chỉnh sửa.
 	UserIsArranged          = 2004 // Nhân sự đã được phân công giảng dạy. Không thể xóa.
+
+	ERROR_STUDENT_HAS_ASSIGNED = "ERROR_STUDENT_HAS_ASSIGNED"
 )
