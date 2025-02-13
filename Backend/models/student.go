@@ -1,9 +1,10 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	"time"
 )
 
 type Student struct {
@@ -85,4 +86,10 @@ type StudentSchedule struct {
 	TimeSlots   []TimeSlot   `json:"time_slots" gorm:"foreignKey:ScheduleId"`
 	StudyShifts []Shift      `json:"-" gorm:"foreignKey:ScheduleId"`
 	ShortShifts []ShortShift `json:"short_shifts" gorm:"-"`
+}
+
+type StudentSession struct {
+	StudentId uuid.UUID `json:"student_id" gorm:"not null"`
+	SessionId uuid.UUID `json:"session_id" gorm:"not null"`
+	ClassId   uuid.UUID `json:"class_id" gorm:"not null"`
 }

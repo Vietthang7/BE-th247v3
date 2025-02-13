@@ -5,3 +5,6 @@ certificate.pem
 request.csr
 vendor/
 .idea/
+go.mod
+go.sum
+tmp/
