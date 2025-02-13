@@ -27,7 +27,8 @@ const (
 	DocsCategoryIsAssigned = 2014 // Danh mục đã có dữ liệu thuộc. Không thể xóa
 
 	//User
-	EmailDuplication        = 2000 // Lỗi tồn tại email
+	EmailDuplication = 2000
+	// Lỗi tồn tại email
 	UsernameDuplication     = 2002 // Lỗi tồn tại tên tài khoản
 	PhoneDuplication        = 2001 // Lỗi tồn tại số điện thoại
 	UpdateUserHasDataLinked = 2003 // Nhân sự đã được gán dữ liệu. Không thể chỉnh sửa.
