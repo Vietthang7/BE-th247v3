@@ -18,4 +18,5 @@ func AdminRoutes(app *fiber.App) {
 	Sp_RequestRouter(admin)
 	PermissionRoutes(admin)
 	AddressRouter(admin)
+	Branch(admin)
 }

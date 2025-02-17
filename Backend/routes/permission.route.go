@@ -1,9 +1,10 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"intern_247/controllers"
 	mdw "intern_247/middleware"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func PermissionRoutes(permission fiber.Router) {
@@ -20,5 +21,5 @@ func PermissionRoutes(permission fiber.Router) {
 	permission.Get("/permission-grp/:id", mdw.Gate("permission_grp", "read"), controllers.ReadPermissionGrp)
 	permission.Put("/permission-grp/:id", mdw.Gate("permission_grp", "update"), controllers.UpdatePermissionGrp)
 	permission.Delete("/permission-grp", mdw.Gate("permission_grp", "delete"), controllers.DeletePermissionGroup)
-	permission.Get("/permission-grp-excel", mdw.Gate("permission_grp", "export"), controllers.ExportListGrps)
+	// permission.Get("/permission-grp-excel", mdw.Gate("permission_grp", "export"), controllers.ExportListGrps)
 }
