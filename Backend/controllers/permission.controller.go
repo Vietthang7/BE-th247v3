@@ -28,6 +28,7 @@ func CreatePermission(c *fiber.Ctx) error {
 	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, entry)
 }
 
+// TAG QUYỀN
 func CreatePermissionTag(c *fiber.Ctx) error {
 	var (
 		entry models.PermissionTag
@@ -73,3 +74,5 @@ func ReadPermissionTag(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusInternalServerError, consts.GetFail, err.Error())
 	}
 }
+
+// END TAG QUYỀN
