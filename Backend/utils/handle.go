@@ -1,6 +1,9 @@
 package utils
 
-import "net/mail"
+import (
+	"net/mail"
+	"unicode/utf8"
+)
 
 func IsVerifiedEmail(status *bool) bool {
 	return status != nil && *status
@@ -30,4 +33,13 @@ func Contains[S ~[]E, E comparable](s S, v E) bool {
 func EmailValid(email string) bool {
 	_, err := mail.ParseAddress(email)
 	return err == nil
+}
+
+// return
+// true : v <= max
+func IsValidStrLen(v string, max int) bool {
+	if v == "" {
+		return false
+	}
+	return utf8.RuneCountInString(v) <= max
 }

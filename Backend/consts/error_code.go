@@ -35,4 +35,11 @@ const (
 	UserIsArranged          = 2004 // Nhân sự đã được phân công giảng dạy. Không thể xóa.
 
 	ERROR_STUDENT_HAS_ASSIGNED = "ERROR_STUDENT_HAS_ASSIGNED"
+
+	// category
+	ERROR_CATEGORY_HAS_CHILDREN        = 6072 // Danh mục đã có dữ liệu thuộc. Không thể xóa
+	ERROR_CATEGORY_HAS_DATA_DEPENDENCY = 6073 // Danh mục đã có dữ liệu thuộc. Không thể xóa
+	ERROR_CATEGORY_EXISTS              = 6074 // Danh mục đã tồn tại
+	ERROR_CATEGORY_NOT_FOUND           = 6075 // Không tìm thấy danh mục
+	ERROR_CATEGORY_HAS_DEPENDENCIES    = 6076 // Category đang bị ràng buộc
 )
