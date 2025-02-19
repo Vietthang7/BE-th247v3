@@ -44,6 +44,11 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Chi nhánh không hoạt động")
 	}
 
+	var existingStudyNeeds repo.StudyNeeds
+	if err := app.Database.DB.Where("student_id = ?", entry.StudentId).First(&existingStudyNeeds).Error; err == nil {
+		return ResponseError(c, fiber.StatusConflict, consts.InvalidInput, "Học viên đã được gán chi nhánh trước đó")
+	}
+
 	entry.CenterId = *user.CenterId
 	if err = entry.Create(); err != nil {
 		logrus.Error(err)
