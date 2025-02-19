@@ -25,17 +25,17 @@ func (u *StudyNeeds) Create() (err error) {
 	})
 }
 
-func GetStudyNeedsByStudentID(studentID uuid.UUID, centerID uuid.UUID) ([]StudyNeeds, error) {
-	var studyNeeds []StudyNeeds
+func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds, error) {
+	var studyNeeds StudyNeeds
 	err := app.Database.DB.
-		Where("student_id = ? AND center_id = ?", studentID, centerID).
-		Find(&studyNeeds).Error // Dùng Find thay vì First
+		Where("id = ? AND center_id = ?", studyNeedsID, centerID).
+		First(&studyNeeds).Error // Lấy 1 bản ghi duy nhất
 
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
 	}
-	return studyNeeds, nil
+	return &studyNeeds, nil
 }
 
 func GetAllStudyNeeds(centerID uuid.UUID) ([]StudyNeeds, error) {

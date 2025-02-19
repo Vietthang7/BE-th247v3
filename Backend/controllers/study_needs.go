@@ -13,7 +13,6 @@ import (
 )
 
 func CreateStudyNeeds(c *fiber.Ctx) error {
-	// Lấy thông tin người dùng từ JWT token
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
@@ -24,21 +23,27 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 		entry repo.StudyNeeds
 	)
 
-	// Parse dữ liệu từ request body
 	if err = c.BodyParser(&entry); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest,
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
 	}
 
-	// Kiểm tra xem student_id có tồn tại không
 	var student repo.Student
 	if err := app.Database.DB.Where("id = ?", entry.StudentId).First(&student).Error; err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy học viên")
 	}
 
-	// Nếu student_id hợp lệ, tiếp tục tạo StudyNeeds
+	var branch repo.Branch
+	if err := app.Database.DB.Where("id = ?", entry.BranchId).First(&branch).Error; err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy chi nhánh")
+	}
+	if branch.IsActive == nil || !*branch.IsActive {
+		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Chi nhánh không hoạt động")
+	}
+
 	entry.CenterId = *user.CenterId
 	if err = entry.Create(); err != nil {
 		logrus.Error(err)
@@ -55,21 +60,20 @@ func ReadStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
 	}
 
-	studentIDParam := c.Params("student_id")
-	if studentIDParam != "" {
-		studentID, err := uuid.Parse(studentIDParam)
+	studyNeedsIDParam := c.Params("id")
+	if studyNeedsIDParam != "" {
+		studyNeedsID, err := uuid.Parse(studyNeedsIDParam)
 		if err != nil {
-			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Student ID")
+			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Study Needs ID")
 		}
 
-		studyNeeds, err := repo.GetStudyNeedsByStudentID(studentID, *user.CenterId)
-		if err != nil || len(studyNeeds) == 0 {
+		studyNeeds, err := repo.GetStudyNeedsByID(studyNeedsID, *user.CenterId)
+		if err != nil {
 			return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
 		}
 		return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, studyNeeds)
 	}
 
-	// Nếu không có student_id, trả về tất cả
 	studyNeeds, err := repo.GetAllStudyNeeds(*user.CenterId)
 	if err != nil {
 		return ResponseError(c, fiber.StatusInternalServerError, consts.GetFailed, "Failed to retrieve study needs")
@@ -78,65 +82,30 @@ func ReadStudyNeeds(c *fiber.Ctx) error {
 	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, studyNeeds)
 }
 
-// func GetStudyNeedsByStudentID(c *fiber.Ctx) error {
-// 	// Lấy thông tin người dùng từ JWT token
-// 	user, ok := c.Locals("user").(models.User)
-// 	if !ok {
-// 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
-// 	}
-
-// 	// Lấy student_id từ URL parameters
-// 	studentIDParam := c.Params("student_id")
-// 	studentID, err := uuid.Parse(studentIDParam)
-// 	if err != nil {
-// 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Student ID")
-// 	}
-
-// 	var studyNeeds repo.StudyNeeds
-
-// 	// Truy vấn cơ sở dữ liệu theo student_id và center_id
-// 	if err := app.Database.DB.Where("student_id = ? AND center_id = ?", studentID, user.CenterId).First(&studyNeeds).Error; err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
-// 		}
-// 		logrus.Error(err)
-// 		return ResponseError(c, fiber.StatusInternalServerError,
-// 			fmt.Sprintf("%s: %s", consts.GetFailed, err.Error()), consts.GetFailed)
-// 	}
-
-// 	// Trả về dữ liệu thành công
-// 	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, studyNeeds)
-// }
-
 func UpdateStudyNeeds(c *fiber.Ctx) error {
-	// Lấy thông tin người dùng từ JWT token
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
 	}
 
-	// Lấy student_id từ Path Variables
-	studentIDParam := c.Params("student_id")
-	studentID, err := uuid.Parse(studentIDParam)
+	studyNeedsIDParam := c.Params("id")
+	studyNeedsID, err := uuid.Parse(studyNeedsIDParam)
 	if err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Student ID")
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Study Needs ID")
 	}
 
-	// Lấy dữ liệu từ body request
 	var updatedStudyNeeds repo.StudyNeeds
 	if err := c.BodyParser(&updatedStudyNeeds); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid request body")
 	}
 
-	// Tìm kiếm StudyNeeds của sinh viên với student_id
 	var existingStudyNeeds repo.StudyNeeds
-	if err := app.Database.DB.Where("student_id = ? AND center_id = ?", studentID, user.CenterId).First(&existingStudyNeeds).Error; err != nil {
+	if err := app.Database.DB.Where("id = ? AND center_id = ?", studyNeedsID, user.CenterId).First(&existingStudyNeeds).Error; err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
 	}
 
-	// Cập nhật các trường cần thiết
 	if updatedStudyNeeds.StudyGoals != "" {
 		existingStudyNeeds.StudyGoals = updatedStudyNeeds.StudyGoals
 	}
@@ -156,12 +125,37 @@ func UpdateStudyNeeds(c *fiber.Ctx) error {
 		existingStudyNeeds.BranchId = updatedStudyNeeds.BranchId
 	}
 
-	// Lưu lại thay đổi
 	if err := app.Database.DB.Save(&existingStudyNeeds).Error; err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError, consts.UpdateFailed, "Failed to update study needs")
 	}
 
-	// Trả về kết quả thành công
 	return ResponseSuccess(c, fiber.StatusOK, consts.UpdateSuccess, existingStudyNeeds)
+}
+
+func DeleteStudyNeeds(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
+	}
+
+	studyNeedsIDParam := c.Params("id")
+	studyNeedsID, err := uuid.Parse(studyNeedsIDParam)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Study Needs ID")
+	}
+
+	var studyNeeds repo.StudyNeeds
+	if err := app.Database.DB.Where("id = ? AND center_id = ?", studyNeedsID, user.CenterId).
+		First(&studyNeeds).Error; err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
+	}
+
+	if err := app.Database.DB.Delete(&studyNeeds).Error; err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, consts.DeleteFail, "Failed to delete study needs")
+	}
+
+	return ResponseSuccess(c, fiber.StatusOK, consts.DeleteSuccess, "Deleted successfully")
 }
