@@ -18,39 +18,29 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
 	}
 
-	var (
-		err   error
-		entry repo.StudyNeeds
-	)
-
-	if err = c.BodyParser(&entry); err != nil {
+	var entry repo.StudyNeeds
+	if err := c.BodyParser(&entry); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest,
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
 	}
 
-	var student repo.Student
-	if err := app.Database.DB.Where("id = ?", entry.StudentId).First(&student).Error; err != nil {
-		logrus.Error(err)
+	if err := repo.CheckStudentExists(entry.StudentId); err != nil {
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy học viên")
 	}
-
-	var branch repo.Branch
-	if err := app.Database.DB.Where("id = ?", entry.BranchId).First(&branch).Error; err != nil {
-		logrus.Error(err)
-		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy chi nhánh")
+	if entry.BranchId == nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Branch ID không được để trống")
 	}
-	if branch.IsActive == nil || !*branch.IsActive {
-		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Chi nhánh không hoạt động")
+	if err := repo.CheckBranchIsActive(*entry.BranchId); err != nil {
+		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, err.Error())
 	}
-
-	var existingStudyNeeds repo.StudyNeeds
-	if err := app.Database.DB.Where("student_id = ?", entry.StudentId).First(&existingStudyNeeds).Error; err == nil {
+	if err := repo.CheckStudentHasBranch(entry.StudentId); err == nil {
 		return ResponseError(c, fiber.StatusConflict, consts.InvalidInput, "Học viên đã được gán chi nhánh trước đó")
 	}
 
 	entry.CenterId = *user.CenterId
-	if err = entry.Create(); err != nil {
+
+	if err := entry.Create(); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError,
 			fmt.Sprintf("%s: %s", consts.CreateFail, err.Error()), consts.CreateFailed)
@@ -109,6 +99,18 @@ func UpdateStudyNeeds(c *fiber.Ctx) error {
 	if err := app.Database.DB.Where("id = ? AND center_id = ?", studyNeedsID, user.CenterId).First(&existingStudyNeeds).Error; err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
+	}
+
+	if updatedStudyNeeds.BranchId != nil {
+		var branch repo.Branch
+		if err := app.Database.DB.Where("id = ?", updatedStudyNeeds.BranchId).First(&branch).Error; err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy chi nhánh")
+		}
+		if branch.IsActive == nil || !*branch.IsActive {
+			return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Chi nhánh không hoạt động")
+		}
+		existingStudyNeeds.BranchId = updatedStudyNeeds.BranchId
 	}
 
 	if updatedStudyNeeds.StudyGoals != "" {

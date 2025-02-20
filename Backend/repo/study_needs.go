@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"intern_247/app"
 	"intern_247/models"
 
@@ -13,14 +14,43 @@ import (
 type StudyNeeds models.StudyNeeds
 type ListStudyNeeds []models.StudyNeeds
 
-func (u *StudyNeeds) Create() (err error) {
+func CheckStudentExists(studentID uuid.UUID) error {
+	var student Student
+	if err := app.Database.DB.Where("id = ?", studentID).First(&student).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func CheckBranchIsActive(branchID uuid.UUID) error {
+	var branch Branch
+	if err := app.Database.DB.Where("id = ?", branchID).First(&branch).Error; err != nil {
+		return fmt.Errorf("%s", "Không tìm thấy chi nhánh")
+	}
+	if branch.IsActive == nil || !*branch.IsActive {
+		return fmt.Errorf("%s", "Chi nhánh không hoạt động")
+	}
+	return nil
+}
+
+func CheckStudentHasBranch(studentID uuid.UUID) error {
+	var existingStudyNeeds StudyNeeds
+	if err := app.Database.DB.Where("student_id = ?", studentID).First(&existingStudyNeeds).Error; err == nil {
+		return fmt.Errorf("%s", "học viên đã được gán chi nhánh trước đó")
+	}
+	return nil
+}
+
+func (u *StudyNeeds) Create() error {
 	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
 	defer cancel()
+
 	return app.Database.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err = tx.Create(&u).Error; err != nil {
+		if err := tx.Create(&u).Error; err != nil {
 			logrus.Error(err)
 			return err
 		}
+
 		return nil
 	})
 }
