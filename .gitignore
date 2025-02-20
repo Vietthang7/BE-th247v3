@@ -1,0 +1,10 @@
+.env
+private_key.pem
+public_key.pem
+certificate.pem
+request.csr
+vendor/
+.idea/
+go.mod
+go.sum
+tmp
