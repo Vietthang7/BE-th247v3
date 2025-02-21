@@ -33,9 +33,6 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 	if err := repo.CheckBranchIsActive(*entry.BranchId); err != nil {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, err.Error())
 	}
-	if err := repo.CheckStudentHasBranch(entry.StudentId); err == nil {
-		return ResponseError(c, fiber.StatusConflict, consts.InvalidInput, "Học viên đã được gán chi nhánh trước đó")
-	}
 
 	entry.CenterId = *user.CenterId
 

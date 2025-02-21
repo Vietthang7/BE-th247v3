@@ -33,14 +33,6 @@ func CheckBranchIsActive(branchID uuid.UUID) error {
 	return nil
 }
 
-func CheckStudentHasBranch(studentID uuid.UUID) error {
-	var existingStudyNeeds StudyNeeds
-	if err := app.Database.DB.Where("student_id = ?", studentID).First(&existingStudyNeeds).Error; err == nil {
-		return fmt.Errorf("%s", "học viên đã được gán chi nhánh trước đó")
-	}
-	return nil
-}
-
 func (u *StudyNeeds) Create() error {
 	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
 	defer cancel()
