@@ -26,6 +26,10 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
 	}
 
+	if len(entry.SubjectIds) != 1 {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Chỉ được nhập 1 môn học")
+	}
+
 	if err := repo.CheckStudentExists(entry.StudentId); err != nil {
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy học viên")
 	}
@@ -96,6 +100,10 @@ func UpdateStudyNeeds(c *fiber.Ctx) error {
 	if err := c.BodyParser(&updatedData); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid request body")
+	}
+
+	if len(updatedData.SubjectIds) > 1 {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Chỉ được nhập 1 môn học")
 	}
 
 	if err := updatedData.Update(studyNeedsID, *user.CenterId); err != nil {
