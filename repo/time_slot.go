@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+type TimeSlot models.TimeSlot
+
 func TsDeleteTimeSlot(tx *gorm.DB) error {
 	return tx.Unscoped().Delete(&models.TimeSlot{}).Error
 }

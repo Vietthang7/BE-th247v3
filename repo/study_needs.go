@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"intern_247/app"
 	"intern_247/models"
@@ -74,17 +75,36 @@ func (u *StudyNeeds) Create() error {
 	})
 }
 
-func GetStudyNeedsByStudentID(studentID uuid.UUID, centerID uuid.UUID) ([]StudyNeeds, error) {
-	var studyNeeds []StudyNeeds
+func CheckSubjectsExist(subjectIDs []uuid.UUID) error {
+	if len(subjectIDs) == 0 {
+		return nil
+	}
+
+	var count int64
+	if err := app.Database.DB.Model(&models.Subject{}).
+		Where("id IN (?)", subjectIDs).
+		Count(&count).Error; err != nil {
+		return errors.New("lỗi khi kiểm tra môn học")
+	}
+
+	if count != int64(len(subjectIDs)) {
+		return errors.New("một hoặc nhiều môn học không tồn tại")
+	}
+
+	return nil
+}
+
+func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds, error) {
+	var studyNeeds StudyNeeds
 	err := app.Database.DB.
-		Where("student_id = ? AND center_id = ?", studentID, centerID).
-		Find(&studyNeeds).Error // Dùng Find thay vì First
+		Where("id = ? AND center_id = ?", studyNeedsID, centerID).
+		First(&studyNeeds).Error // Dùng First vì lấy theo ID là duy nhất
 
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
 	}
-	return studyNeeds, nil
+	return &studyNeeds, nil
 }
 
 func GetAllStudyNeeds(centerID uuid.UUID) ([]StudyNeeds, error) {
@@ -98,9 +118,9 @@ func GetAllStudyNeeds(centerID uuid.UUID) ([]StudyNeeds, error) {
 	return studyNeeds, nil
 }
 
-func (sn *StudyNeeds) Update(studentID uuid.UUID, centerID uuid.UUID) error {
+func (sn *StudyNeeds) Update(studyNeedsID uuid.UUID, centerID uuid.UUID) error {
 	var existingStudyNeeds StudyNeeds
-	if err := app.Database.DB.Where("student_id = ? AND center_id = ?", studentID, centerID).First(&existingStudyNeeds).Error; err != nil {
+	if err := app.Database.DB.Where("id = ? AND center_id = ?", studyNeedsID, centerID).First(&existingStudyNeeds).Error; err != nil {
 		logrus.Error(err)
 		return fmt.Errorf("%s", "Study needs not found")
 	}
@@ -122,6 +142,24 @@ func (sn *StudyNeeds) Update(studentID uuid.UUID, centerID uuid.UUID) error {
 	}
 	if sn.BranchId != nil {
 		existingStudyNeeds.BranchId = sn.BranchId
+	}
+
+	if len(sn.SubjectIds) > 0 {
+		if err := app.Database.DB.Where("student_id = ?", existingStudyNeeds.StudentId).Delete(&StudentSubject{}).Error; err != nil {
+			logrus.Error("Failed to delete old StudentSubjects:", err)
+			return err
+		}
+
+		for _, subjectID := range sn.SubjectIds {
+			newStudentSubject := StudentSubject{
+				StudentId: existingStudyNeeds.StudentId,
+				SubjectId: subjectID,
+			}
+			if err := app.Database.DB.Create(&newStudentSubject).Error; err != nil {
+				logrus.Error("Failed to insert new StudentSubject:", err)
+				return err
+			}
+		}
 	}
 
 	return app.Database.DB.Save(&existingStudyNeeds).Error

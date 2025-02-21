@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+type Shift models.Shift
+
 func TsDeleteShift(tx *gorm.DB) error {
 	return tx.Unscoped().Delete(&models.Shift{}).Error
 }

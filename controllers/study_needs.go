@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
@@ -9,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func CreateStudyNeeds(c *fiber.Ctx) error {
@@ -34,6 +36,10 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, err.Error())
 	}
 
+	if err := repo.CheckSubjectsExist(entry.SubjectIds); err != nil {
+		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Một hoặc nhiều môn học không tồn tại")
+	}
+
 	entry.CenterId = *user.CenterId
 
 	if err := entry.Create(); err != nil {
@@ -51,21 +57,21 @@ func ReadStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
 	}
 
-	studentIDParam := c.Params("student_id")
-	if studentIDParam != "" {
-		studentID, err := uuid.Parse(studentIDParam)
+	studyNeedsIDParam := c.Params("id")
+	if studyNeedsIDParam != "" {
+		studyNeedsID, err := uuid.Parse(studyNeedsIDParam)
 		if err != nil {
-			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Student ID")
+			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid StudyNeeds ID")
 		}
 
-		studyNeeds, err := repo.GetStudyNeedsByStudentID(studentID, *user.CenterId)
-		if err != nil || len(studyNeeds) == 0 {
+		studyNeeds, err := repo.GetStudyNeedsByID(studyNeedsID, *user.CenterId)
+		if err != nil {
 			return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
 		}
 		return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, studyNeeds)
 	}
 
-	// Nếu không có student_id, trả về tất cả
+	// Nếu không có study_needs_id, trả về tất cả
 	studyNeeds, err := repo.GetAllStudyNeeds(*user.CenterId)
 	if err != nil {
 		return ResponseError(c, fiber.StatusInternalServerError, consts.GetFailed, "Failed to retrieve study needs")
@@ -80,22 +86,91 @@ func UpdateStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
 	}
 
-	studentIDParam := c.Params("student_id")
-	studentID, err := uuid.Parse(studentIDParam)
+	studyNeedsIDParam := c.Params("id")
+	studyNeedsID, err := uuid.Parse(studyNeedsIDParam)
 	if err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Student ID")
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid StudyNeeds ID")
 	}
 
-	var updatedStudyNeeds repo.StudyNeeds
-	if err := c.BodyParser(&updatedStudyNeeds); err != nil {
+	var updatedData repo.StudyNeeds
+	if err := c.BodyParser(&updatedData); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid request body")
 	}
 
-	if err := updatedStudyNeeds.Update(studentID, *user.CenterId); err != nil {
+	if err := updatedData.Update(studyNeedsID, *user.CenterId); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError, consts.UpdateFailed, "Failed to update study needs")
 	}
 
+	var updatedStudyNeeds repo.StudyNeeds
+	if err := app.Database.DB.Where("id = ?", studyNeedsID).First(&updatedStudyNeeds).Error; err != nil {
+		logrus.Error("Failed to fetch updated StudyNeeds:", err)
+		return ResponseError(c, fiber.StatusInternalServerError, consts.UpdateFailed, "Failed to retrieve updated study needs")
+	}
+
 	return ResponseSuccess(c, fiber.StatusOK, consts.UpdateSuccess, updatedStudyNeeds)
+}
+
+func DeleteStudyNeeds(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, "Permission denied!")
+	}
+
+	studyNeedsIDParam := c.Params("id")
+	studyNeedsID, err := uuid.Parse(studyNeedsIDParam)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid Study Needs ID")
+	}
+
+	var studyNeeds repo.StudyNeeds
+	if err := app.Database.DB.Where("id = ? AND center_id = ?", studyNeedsID, user.CenterId).
+		First(&studyNeeds).Error; err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Study needs not found")
+	}
+
+	if err := app.Database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("student_id = ? AND center_id = ?", studyNeeds.StudentId, user.CenterId).
+			Delete(&repo.StudentSchedule{}).Error; err != nil {
+			logrus.Error("Failed to delete StudentSchedule:", err)
+			return err
+		}
+
+		if err := tx.Where("student_id = ?", studyNeeds.StudentId).
+			Delete(&repo.StudentSchedule{}).Error; err != nil {
+			logrus.Error("Failed to delete StudentScheduleData:", err)
+			return err
+		}
+
+		if err := tx.Where("student_id = ?", studyNeeds.StudentId).
+			Delete(&repo.TimeSlot{}).Error; err != nil {
+			logrus.Error("Failed to delete TimeSlots:", err)
+			return err
+		}
+
+		if err := tx.Where("student_id = ?", studyNeeds.StudentId).
+			Delete(&repo.Shift{}).Error; err != nil {
+			logrus.Error("Failed to delete ShortShifts:", err)
+			return err
+		}
+
+		if err := tx.Where("student_id = ?", studyNeeds.StudentId).
+			Delete(&repo.StudentSubject{}).Error; err != nil {
+			logrus.Error("Failed to delete StudentSubject:", err)
+			return err
+		}
+
+		if err := tx.Delete(&studyNeeds).Error; err != nil {
+			logrus.Error("Failed to delete StudyNeeds:", err)
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, consts.DeleteFail, "Failed to delete study needs and related data")
+	}
+
+	return ResponseSuccess(c, fiber.StatusOK, consts.DeleteSuccess, "Deleted successfully")
 }
