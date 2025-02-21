@@ -83,11 +83,61 @@ func GetDetailSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Subject, er
 	return subject, query.Error
 }
 
-//func GetListSubjectsByCenterId(q consts.Query, user TokenData) ([]models.SubjectMoreInfo, consts.Pagination, error) {
-//	var (
-//		subjects   []models.SubjectMoreInfo
-//		pagination consts.Pagination
-//		isActive   *bool
-//	)
-//	db := app.Database.DB.Model(&models.Subject{}).Where("subjects.center_id = ?", user.CenterId).Select("subjects.id", "subjects.code", "subjects.name", "subjects.thumbnail", "subjects.fee_type", "subjects.category_id", "subjects.origin_fee", "subject.discount_fee", "subjects.created_at", "subjects.updated_at", "subjects.is_active", "subjects.total_lessons", "(SELECT COUNT(classes.id) FROM classes WHERE subject_id = subjects.id AND classes.deleted_at IS NULL) AS class_total"
-//}
+func GetListSubjectsByCenterId(q consts.Query, user TokenData) ([]models.SubjectMoreInfo, consts.Pagination, error) {
+	var (
+		subjects   []models.SubjectMoreInfo
+		pagination consts.Pagination
+		isActive   *bool
+	)
+	db := app.Database.DB.Model(&models.Subject{}).Where("subjects.center_id = ?", user.CenterId).Select("subjects.id", "subjects.code", "subjects.name", "subjects.thumbnail", "subjects.fee_type", "subjects.category_id", "subjects.origin_fee", "subjects.discount_fee", "subjects.created_at", "subjects.updated_at", "subjects.is_active", "subjects.total_lessons", "(SELECT COUNT(classes.id) FROM classes WHERE subject_id = subjects.id AND classes.deleted_at IS NULL) AS class_total", "(SELECT COUNT(ss.`student_id`) FROM student_subjects as ss LEFT JOIN student_classes AS sc ON ss.student_id = sc.student_id JOIN students as s ON s.id = ss.student_id WHERE sc.student_id IS NULL AND ss.subject_id = subjects.id AND s.deleted_at IS NULL) as student_pendings")
+	db.Joins(`JOIN (SELECT code, name, MAX(updated_at) AS latest_updated_at FROM subjects WHERE center_id = ? AND deleted_at IS NULL GROUP BY code, name) AS latest_subjects ON (subjects.code = latest_subjects.code OR subjects.name = latest_subjects.name) AND subjects.updated_at = latest_subjects.latest_updated_at`, user.CenterId)
+	isActive = q.GetActive()
+	if q.Teacher == "true" {
+		db.Preload("Teachers", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "full_name")
+		})
+	}
+	if isActive != nil {
+		db = db.Where("subjects.is_active = ?", *isActive)
+	}
+	if q.Relation != "" {
+		db.Where("subjects.category_id = ?", q.Relation)
+	}
+	if q.Search != "" {
+		searchStr := "%" + q.Search + "%"
+		db.Where("(subjects.`name` LIKE ? OR subjects.`code` LIKE ?)", searchStr, searchStr)
+	}
+
+	db.Preload("Category", func(db1 *gorm.DB) *gorm.DB {
+		return db1.Select("id", "name")
+	})
+	if q.StudentId != "" {
+		db.Joins("INNER JOIN student_subjects ON student_subjects.subject_id = subjects.id").
+			Where("student_subjects.student_id = ?", q.StudentId)
+	}
+	db.Count(&pagination.TotalResults)
+	// db.Joins("INNER JOIN `classes` ON classes.subject_id = `subjects`.id")
+	db.Order(fmt.Sprintf("%s %s, subjects.updated_at DESC", q.GetField(consts.SubjectField, "subjects.created_at"), q.GetSort())).Offset(q.GetOffset()).Limit(q.GetPageSize()).Find(&subjects)
+
+	pagination.CurrentPage = q.GetPage()
+	pagination.TotalPages = pagination.GetTotalPages(q.GetPageSize())
+	return subjects, pagination, db.Error
+}
+func GetAllSubjectByCenterId(q consts.Query, centerId uuid.UUID) ([]models.Subject, error) {
+	var (
+		subjects []models.Subject
+		isActive *bool
+	)
+	db := app.Database.DB.Select("subjects.`id`, subjects.`name`").Where("subjects.center_id", centerId)
+	db.Joins(`INNER JOIN (SELECT name, MAX(updated_at) AS latest_updated_at FROM subjects WHERE center_id = ? AND deleted_at IS NULL AND name = subjects.name GROUP BY name) AS latest_subjects ON subjects.name = latest_subjects.name AND subjects.updated_at = latest_subjects.latest_updated_at`, centerId)
+	//if q.Curriculum != "" {
+	//	db.Joins("INNER JOIN curriculum_subjects as cs ON cs.`subject_id` = subjects.`id`")
+	//	db.Where("cs.`curriculum_id` = ?", q.Curriculum)
+	//}
+	isActive = q.GetActive()
+	if isActive != nil {
+		db = db.Where("subjects.`is_active` = ?", *isActive)
+	}
+	db.Order("subjects.`created_at` DESC").Find(&subjects)
+	return subjects, db.Error
+}

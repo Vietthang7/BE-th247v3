@@ -12,5 +12,6 @@ func SubjectRoutes(subject fiber.Router) {
 	subject.Patch("/subject", mdw.Gate("subject", "update"), controllers.UpdateSubject)
 	subject.Delete("/subject", mdw.Gate("subject", "delete"), controllers.DeleteSubject)
 	subject.Get("/subject", mdw.Gate("subject", "read"), controllers.GetDetailSubject)
-	//subject.Get("/subjects", mdw.Gate("subject", "list"), controllers.GetListSubjects)
+	subject.Get("/subjects", mdw.Gate("subject", "list"), controllers.GetListSubjects)
+	subject.Get("/subject/all", mdw.Gate("subject", "list"), controllers.GetAllSubject)
 }

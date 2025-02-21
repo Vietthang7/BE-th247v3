@@ -30,9 +30,12 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 		input Input
 		err   error
 	)
+	fmt.Println("ok")
 	if err := c.BodyParser(&input); err != nil {
 		return c.JSON(fiber.Map{"status": false, "message": "Review your input", "error": err.Error()})
 	}
+	fmt.Println(input.Email)
+	fmt.Println(input.Password)
 	var loginInfo repo.LoginInfo
 	if err = loginInfo.First("email = ? OR phone = ? OR username = ?",
 		[]interface{}{input.Email, input.Email, input.Email}, "Student", "User"); err != nil {
@@ -40,7 +43,7 @@ func NewLoginGetToken(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusInternalServerError,
 			fmt.Sprintf("%s: %s", consts.GetFailed, err.Error()), consts.GetFailed)
 	}
-
+	fmt.Println(loginInfo.PasswordHash)
 	if err = bcrypt.CompareHashAndPassword([]byte(loginInfo.PasswordHash), []byte(input.Password)); err != nil {
 		return c.JSON(fiber.Map{"status": false, "message": "Review your input password", "error": err, "user": nil})
 	}
