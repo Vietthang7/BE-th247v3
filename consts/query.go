@@ -1,12 +1,22 @@
 package consts
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"intern_247/utils"
+	"math"
+	"strconv"
+)
 
 type Pagination struct {
 	CurrentPage  int     `json:"current_page"`
 	TotalPages   float64 `json:"total_pages"`
 	TotalResults int64   `json:"total"`
 }
+
+func (p *Pagination) GetTotalPages(len int) float64 {
+	return math.Ceil(float64(p.TotalResults) / float64(len))
+}
+
 type Query struct {
 	ID             uuid.UUID `json:"id"`
 	Search         string    `json:"search"`
@@ -33,4 +43,43 @@ type Query struct {
 	Teacher        string    `query:"teacher"`
 	Result         int       `query:"result"`
 	DisableId      string    `query:"disable_id"`
+}
+
+func (q *Query) GetActive() *bool {
+	if q.Active != "" {
+		if status, err := strconv.ParseBool(q.Active); err == nil {
+			return &status
+		}
+	}
+	return nil
+}
+func (q *Query) GetOffset() int {
+	return (q.GetPage() - 1) * q.GetPageSize()
+}
+func (q *Query) GetPage() int {
+	if q.Page < 1 {
+		q.Page = 1
+	}
+	return q.Page
+}
+func (q *Query) GetPageSize() int {
+	if q.Length > 200 {
+		q.Length = 200
+	}
+	if q.Length < 1 {
+		q.Length = 12
+	}
+	return q.Length
+}
+func (q *Query) GetField(Orders []string, d string) string {
+	if !utils.Contains(Orders, q.Order) {
+		q.Order = d
+	}
+	return q.Order
+}
+func (q *Query) GetSort() string {
+	if q.Sort != "asc" {
+		q.Sort = "desc"
+	}
+	return q.Sort
 }

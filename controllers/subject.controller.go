@@ -338,14 +338,36 @@ func GetDetailSubject(c *fiber.Ctx) error {
 	return ResponseSuccess(c, fiber.StatusOK, "Success", subject)
 }
 
-//func GetListSubjects(c *fiber.Ctx) error {
-//	user, err := repo.GetTokenData(c)
-//	if err != nil {
-//		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
-//	}
-//	query := new(consts.Query)
-//	if err := c.QueryParser(query); err != nil {
-//		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, err.Error())
-//	}
-//
-//}
+func GetListSubjects(c *fiber.Ctx) error {
+	user, err := repo.GetTokenData(c)
+	if err != nil {
+		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+	}
+	query := new(consts.Query)
+	if err := c.QueryParser(query); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, err.Error())
+	}
+	subjects, pagination, err := repo.GetListSubjectsByCenterId(*query, user)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "invalid", err.Error())
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "success", fiber.Map{"subjects": subjects, "pagination": pagination})
+}
+func GetAllSubject(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+	}
+	if user.CenterId == nil {
+		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied - center", consts.ERROR_PERMISSION_DENIED)
+	}
+	query := new(consts.Query)
+	if err := c.QueryParser(query); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, err.Error())
+	}
+	subjects, err := repo.GetAllSubjectByCenterId(*query, *user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.DataNotFound)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "success", subjects)
+}
