@@ -9,6 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type (
+	Branch  models.Branch
+	Branchs []models.Branch
+)
+
 func CreateBranch(DB *gorm.DB, entry *models.Branch) error {
 	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
 	defer cancel()

@@ -2,14 +2,15 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"gorm.io/datatypes"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
 	"intern_247/utils"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+	"gorm.io/datatypes"
 )
 
 type NewSubjectInput struct {
