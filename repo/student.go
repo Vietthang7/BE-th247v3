@@ -236,7 +236,7 @@ func (u *Student) Delete(studentIds []uuid.UUID) (err error) {
 func GetStudentsBySubjectAndCenterId(subjectId, centerId uuid.UUID) ([]models.Student, error) {
 	var students []models.Student
 	db := app.Database.DB.Model(&models.Student{}).Select("students.`id`", "ss.*").Where("center_id = ?", centerId)
-	db.Joins("INNER JOIN student_subject as ss ON students.`id` = ss.`student_id`")
+	db.Joins("INNER JOIN student_subjects as ss ON students.`id` = ss.`student_id`")
 	db.Where("ss.`subject_id` = ?", subjectId)
 	db.Find(&students)
 	return students, db.Error
