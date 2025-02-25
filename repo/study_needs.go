@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"intern_247/app"
@@ -39,11 +40,18 @@ func (u *StudyNeeds) Create() error {
 	defer cancel()
 
 	return app.Database.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Tạo StudyNeeds (GORM sẽ tự sinh ID)
 		if err := tx.Create(&u).Error; err != nil {
 			logrus.Error(err)
 			return err
 		}
 
+		// Đảm bảo ID đã được lấy sau khi tạo
+		if u.ID == uuid.Nil {
+			return fmt.Errorf("failed to get ID after creating StudyNeeds")
+		}
+
+		// Tạo lịch học nếu có
 		if len(u.TimeSlots) > 0 && len(u.ShortShifts) > 0 {
 			var schedule StudentSchedule
 			if err := schedule.CreateByClassroom(tx, u.StudentId, u.CenterId); err != nil {
@@ -57,10 +65,12 @@ func (u *StudyNeeds) Create() error {
 			}
 		}
 
+		// Thêm dữ liệu vào bảng student_subjects với study_needs_id chính xác
 		if len(u.SubjectIds) == 1 {
 			studentSubject := StudentSubject{
-				StudentId: u.StudentId,
-				SubjectId: u.SubjectIds[0], // Lấy subject_id duy nhất
+				StudentId:    u.StudentId,
+				SubjectId:    u.SubjectIds[0], // Lấy subject_id duy nhất
+				StudyNeedsId: u.ID,            // Sử dụng đúng ID của StudyNeeds vừa tạo
 			}
 
 			if err := studentSubject.Create(tx); err != nil {
@@ -100,7 +110,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 		Where("id = ? AND center_id = ?", studyNeedsID, centerID).
 		First(&studyNeeds).Error
 	if err != nil {
-		logrus.Error(err)
+		logrus.Error("StudyNeeds not found:", err)
 		return nil, err
 	}
 
@@ -109,15 +119,66 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 	err = app.Database.DB.
 		Table("student_subjects").
 		Select("subject_id").
-		Where("student_id = ?", studyNeeds.StudentId).
+		Where("study_needs_id = ?", studyNeeds.ID).
 		Pluck("subject_id", &subjectIds).Error
 	if err != nil {
-		logrus.Error(err)
+		logrus.Error("Failed to fetch subject IDs:", err)
 		return nil, err
 	}
-
-	// Gán subject_ids vào StudyNeeds
 	studyNeeds.SubjectIds = subjectIds
+
+	// Lấy lịch học student_schedule dựa vào StudentId
+	var studentSchedule StudentSchedule
+	err = app.Database.DB.
+		Where("student_id = ?", studyNeeds.StudentId).
+		First(&studentSchedule).Error
+	if err != nil {
+		logrus.Warn("Student schedule not found for student:", studyNeeds.StudentId)
+	} else {
+		// Lấy danh sách time_slots từ bảng time_slots
+		var timeSlots []models.TimeSlot
+		err = app.Database.DB.
+			Where("schedule_id = ?", studentSchedule.ID).
+			Find(&timeSlots).Error
+		if err != nil {
+			logrus.Error("Failed to fetch time slots:", err)
+			return nil, err
+		}
+		studyNeeds.TimeSlots = timeSlots
+
+		// Lấy danh sách short_shifts từ bảng shifts với JSON_ARRAYAGG(day_of_week)
+		var rawShortShifts []struct {
+			WorkSessionId uuid.UUID
+			DayOfWeek     string // Nhận dữ liệu JSON dưới dạng chuỗi
+		}
+
+		err = app.Database.DB.
+			Table("shifts").
+			Select("work_session_id, JSON_ARRAYAGG(day_of_week) AS day_of_week").
+			Where("schedule_id = ?", studentSchedule.ID).
+			Group("work_session_id").
+			Scan(&rawShortShifts).Error
+		if err != nil {
+			logrus.Error("Failed to fetch short shifts:", err)
+			return nil, err
+		}
+
+		// Chuyển đổi JSON string thành slice []int
+		var shortShifts []models.ShortShift
+		for _, raw := range rawShortShifts {
+			var days []int
+			if err := json.Unmarshal([]byte(raw.DayOfWeek), &days); err != nil {
+				logrus.Error("Failed to parse day_of_week JSON:", err)
+				continue
+			}
+
+			shortShifts = append(shortShifts, models.ShortShift{
+				WorkSessionId: raw.WorkSessionId,
+				DayOfWeek:     days,
+			})
+		}
+		studyNeeds.ShortShifts = shortShifts
+	}
 
 	return &studyNeeds, nil
 }
@@ -125,7 +186,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 func GetAllStudyNeeds(centerID uuid.UUID) ([]StudyNeeds, error) {
 	var studyNeedsList []StudyNeeds
 
-	// Lấy danh sách StudyNeeds
+	// Lấy danh sách StudyNeeds theo centerID
 	err := app.Database.DB.
 		Where("center_id = ?", centerID).
 		Find(&studyNeedsList).Error
@@ -134,19 +195,20 @@ func GetAllStudyNeeds(centerID uuid.UUID) ([]StudyNeeds, error) {
 		return nil, err
 	}
 
-	// Lấy subject_id cho từng StudyNeeds
+	// Lấy subject_ids theo study_needs_id thay vì student_id
 	for i, studyNeeds := range studyNeedsList {
 		var subjectIds []uuid.UUID
 		err = app.Database.DB.
 			Table("student_subjects").
 			Select("subject_id").
-			Where("student_id = ?", studyNeeds.StudentId).
+			Where("study_needs_id = ?", studyNeeds.ID).
 			Pluck("subject_id", &subjectIds).Error
 		if err != nil {
 			logrus.Error(err)
 			return nil, err
 		}
 
+		// Gán danh sách subjectIds vào đúng studyNeeds
 		studyNeedsList[i].SubjectIds = subjectIds
 	}
 
