@@ -50,4 +50,9 @@ const (
 	ERROR_SUBJECT_EXISTS                     = 6000 // Môn học đã tồn tại
 	ERROR_CAN_NOT_DELETE_SUBJECT_HAS_CLASS   = 6002 // Đã có lớp của môn học. Không thể xóa
 	ERROR_CAN_NOT_DELETE_SUBJECT_HAS_STUDENT = 6003 // Môn học đã có học viên đăng ký. Không thể xóa
+
+	// Classroom - Phòng học
+	ClassroomExistence  = 2009 // Phòng học đã tồn tại
+	ClassroomIsArranged = 2010 // Đã có lớp học được gán. Không thể xóa
+
 )

@@ -68,15 +68,16 @@ type StudentClasses struct {
 	Progress   int        `json:"progress" gorm:"default:0"`
 	Result     int        `json:"result" gorm:"default:0"`
 }
-type CreateClassroomForm struct {
-	BranchId uuid.UUID      `json:"branch_id"`
-	Name     string         `json:"name"`
-	IsOnline *bool          `json:"is_online"`
-	RoomType string         `json:"room_type"`
-	Metadata datatypes.JSON `json:"metadata"`
-	Slots    *int64         `json:"slots"`
-	IsActive *bool          `json:"is_active"`
 
-	TimeSlots   []TimeSlot   `json:"time_slots"` // Khung giờ các ca trong lịch
-	ShortShifts []ShortShift `json:"short_shifts"`
-}
+//type CreateClassroomForm struct {
+//	BranchId uuid.UUID      `json:"branch_id"`
+//	Name     string         `json:"name"`
+//	IsOnline *bool          `json:"is_online"`
+//	RoomType string         `json:"room_type"`
+//	Metadata datatypes.JSON `json:"metadata"`
+//	Slots    *int64         `json:"slots"`
+//	IsActive *bool          `json:"is_active"`
+//
+//	TimeSlots   []TimeSlot   `json:"time_slots"` // Khung giờ các ca trong lịch
+//	ShortShifts []ShortShift `json:"short_shifts"`
+//}

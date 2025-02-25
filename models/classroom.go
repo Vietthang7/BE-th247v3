@@ -23,3 +23,16 @@ type Classroom struct {
 	Branch   *Branch       `json:"branch,omitempty" gorm:"foreignKey:BranchId"`
 	Schedule *RoomSchedule `json:"schedule,omitempty" gorm:"foreignKey:ClassroomId"`
 }
+
+type CreateClassroomForm struct {
+	BranchId uuid.UUID      `json:"branch_id"`
+	Name     string         `json:"name"`
+	IsOnline *bool          `json:"is_online"`
+	RoomType string         `json:"room_type"`
+	Metadata datatypes.JSON `json:"metadata"`
+	Slots    *int64         `json:"slots"`
+	IsActive *bool          `json:"is_active"`
+
+	TimeSlots   []TimeSlot   `json:"time_slots"` // Khung giờ các ca trong lịch
+	ShortShifts []ShortShift `json:"short_shifts"`
+}
