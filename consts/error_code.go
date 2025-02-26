@@ -11,11 +11,12 @@ const (
 	Forbidden       = 1003 // Không có quyền thực hiện thao tác này
 	DeletedFailed   = 1006 // Xóa dữ liệu lỗi
 	//public data
-	ERROR_INTERNAL_SERVER_ERROR = 6104 // Lỗi hệ thống
-	ERROR_EXPIRED_TIME          = 6105 // Dữ liệu không phù hợp
-	ERROR_UNAUTHORIZED          = 6101 // Không có quyền truy cập
-	ERROR_PERMISSION_DENIED     = 6099 // Không có quyền truy cập
-	ERROR_DATA_LONGER           = 6100 // Dữ liệu không phù hợp
+	ERROR_INTERNAL_SERVER_ERROR                 = 6104 // Lỗi hệ thống
+	ERROR_EXPIRED_TIME                          = 6105 // Dữ liệu không phù hợp
+	ERROR_UNAUTHORIZED                          = 6101 // Không có quyền truy cập
+	ERROR_PERMISSION_DENIED                     = 6099 // Không có quyền truy cập
+	ERROR_DATA_LONGER                           = 6100 // Dữ liệu không phù hợp
+	ERROR_START_TIME_MUST_SMALLER_THAN_END_TIME = 6097 // Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc
 
 	// Auth
 	LoginFailed        = 2005 // Đăng nhập thất bại
@@ -55,4 +56,7 @@ const (
 	ClassroomExistence  = 2009 // Phòng học đã tồn tại
 	ClassroomIsArranged = 2010 // Đã có lớp học được gán. Không thể xóa
 
+	// work session
+	ERROR_WORK_SESSION_NAME_EXIST        = 6048 // Tên ca làm đã tồn tại
+	ERROR_WORK_SESSION_HAVE_DATA_DEPENDS = 6049 // Ca làm đã có dữ liệu thuộc. Không thể cập nhật
 )

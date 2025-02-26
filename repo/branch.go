@@ -65,3 +65,9 @@ func DeleteBranch(DB *gorm.DB, branchId uuid.UUID) error {
 	err := DB.WithContext(ctx).Where("id = ?", branchId).Delete(&models.Branch{}).Error
 	return err
 }
+
+func GetBranchByIdAndCenterId(id, centerId uuid.UUID) (models.Branch, error) {
+	var branch models.Branch
+	query := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId).First(&branch)
+	return branch, query.Error
+}
