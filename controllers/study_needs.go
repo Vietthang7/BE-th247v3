@@ -26,26 +26,44 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
 	}
 
+	// Kiểm tra các trường bắt buộc
+	if entry.StudentId == uuid.Nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Student ID không được để trống")
+	}
+	if entry.BranchId == nil || *entry.BranchId == uuid.Nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Branch ID không được để trống")
+	}
 	if len(entry.SubjectIds) != 1 {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Chỉ được nhập 1 môn học")
 	}
 
+	// Kiểm tra Student có tồn tại không
 	if err := repo.CheckStudentExists(entry.StudentId); err != nil {
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Không tìm thấy học viên")
 	}
-	if entry.BranchId == nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Branch ID không được để trống")
-	}
+
+	// Kiểm tra Branch có đang hoạt động không
 	if err := repo.CheckBranchIsActive(*entry.BranchId); err != nil {
 		return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, err.Error())
 	}
 
+	// Kiểm tra Subject có tồn tại không
 	if err := repo.CheckSubjectsExist(entry.SubjectIds); err != nil {
-		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Một hoặc nhiều môn học không tồn tại")
+		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Môn học không tồn tại")
 	}
 
+	// Kiểm tra WorkSession có tồn tại không
+	for _, timeSlot := range entry.TimeSlots {
+		if err := repo.CheckWorkSessionExists(timeSlot.WorkSessionId); err != nil {
+			return ResponseError(c, fiber.StatusNotFound, consts.GetFailed,
+				fmt.Sprintf("Work session với ID %s không tồn tại", timeSlot.WorkSessionId))
+		}
+	}
+
+	// Gán CenterId từ user
 	entry.CenterId = *user.CenterId
 
+	// Ghi dữ liệu vào database
 	if err := entry.Create(); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError,
@@ -100,6 +118,26 @@ func UpdateStudyNeeds(c *fiber.Ctx) error {
 	if err := c.BodyParser(&updatedData); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid request body")
+	}
+
+	if updatedData.BranchId != nil {
+		var branch models.Branch
+		err := app.Database.DB.Where("id = ?", updatedData.BranchId).First(&branch).Error
+		if err != nil {
+			logrus.Error("Invalid BranchId:", err)
+			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid BranchId")
+		}
+	}
+
+	if len(updatedData.SubjectIds) > 0 {
+		for _, subjectId := range updatedData.SubjectIds {
+			var subject models.Subject
+			err := app.Database.DB.Where("id = ?", subjectId).First(&subject).Error
+			if err != nil {
+				logrus.Error("Invalid SubjectId:", err)
+				return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Invalid SubjectId")
+			}
+		}
 	}
 
 	if len(updatedData.SubjectIds) > 1 {
