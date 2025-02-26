@@ -2,10 +2,12 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"intern_247/app"
 	"intern_247/models"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -110,4 +112,23 @@ func IsWorkSessionHasDataDependencies(workSessionId, centerId uuid.UUID) bool {
 		return true
 	}
 	return dataTotal.ShiftTotal > 0 || dataTotal.TimeSlotTotal > 0 || dataTotal.ScheduleClassTotal > 0
+}
+
+func CheckWorkSessionExists(workSessionID uuid.UUID) error {
+	var count int64
+	err := app.Database.DB.
+		Model(&models.WorkSession{}).
+		Where("id = ?", workSessionID).
+		Count(&count).Error
+
+	if err != nil {
+		logrus.Error("Failed to check work session:", err)
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("%s", "Work session không tồn tại")
+	}
+
+	return nil
 }
