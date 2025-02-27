@@ -123,3 +123,81 @@ func ListDocuments(c *fiber.Ctx) error {
 		"pagination": pagination,
 	})
 }
+
+func DeleteDocument(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusUnauthorized, "Error unauthorized!", consts.ERROR_UNAUTHORIZED)
+	}
+
+	var (
+		err   error
+		entry repo.Document
+	)
+
+	err = entry.First("id = ? AND center_id = ?", []interface{}{c.Params("id"), user.CenterId})
+	switch {
+	case err == nil:
+		if repo.CountLessonData("document_id = ?", []interface{}{c.Params("id")}) > 0 {
+			return ResponseError(c, fiber.StatusBadRequest, "Oops! Something went wrong.",
+				consts.DocumentCannotDelete)
+		}
+
+		if err = entry.Delete(); err != nil {
+			logrus.Error("Error deleting Document: ", err)
+			return ResponseError(c, fiber.StatusInternalServerError,
+				fmt.Sprintf("%s: %s", consts.DeleteFail, err.Error()), consts.DeletedFailed)
+		}
+
+		return ResponseSuccess(c, fiber.StatusOK, consts.DeleteSuccess, nil)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		logrus.Error("Document not exist")
+		return ResponseError(c, fiber.StatusNotFound, err.Error(), consts.DataNotFound)
+	default:
+		logrus.Error("Error finding Document: ", err.Error())
+		return ResponseError(c, fiber.StatusInternalServerError,
+			fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
+	}
+}
+
+func UpdateDocument(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusUnauthorized, "Error unauthorized!", consts.ERROR_UNAUTHORIZED)
+	}
+
+	var (
+		err   error
+		entry repo.Document
+	)
+
+	err = entry.First("id = ? AND center_id = ?", []interface{}{c.Params("id"), user.CenterId})
+	switch {
+	case err == nil:
+		if repo.CountLessonData("document_id = ?", []interface{}{c.Params("id")}) > 0 {
+			return ResponseError(c, fiber.StatusBadRequest, "Oops! Something went wrong.",
+				consts.DocumentCannotUpdate)
+		}
+
+		if err = c.BodyParser(&entry); err != nil {
+			logrus.Error("Error invalid input: ", err.Error())
+			return ResponseError(c, fiber.StatusBadRequest,
+				fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
+		}
+
+		if err = entry.Update(); err != nil {
+			logrus.Error("Error updating Document: ", err)
+			return ResponseError(c, fiber.StatusInternalServerError,
+				fmt.Sprintf("%s: %s", consts.DeleteFail, err.Error()), consts.DeletedFailed)
+		}
+
+		return ResponseSuccess(c, fiber.StatusOK, consts.UpdateSuccess, entry)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		logrus.Error("Document not exist")
+		return ResponseError(c, fiber.StatusNotFound, err.Error(), consts.DataNotFound)
+	default:
+		logrus.Error("Error finding Document: ", err.Error())
+		return ResponseError(c, fiber.StatusInternalServerError,
+			fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
+	}
+}

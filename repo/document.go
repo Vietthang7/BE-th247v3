@@ -83,3 +83,15 @@ func (u *Document) Count(query interface{}, args []interface{}) int64 {
 	app.Database.DB.Where(query, args...).Model(&models.Document{}).WithContext(ctx).Count(&count)
 	return count
 }
+
+func (u *Document) Delete() (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	return app.Database.DB.WithContext(ctx).Delete(&u).Error
+}
+
+func (u *Document) Update() (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	return app.Database.DB.WithContext(ctx).Updates(&u).Error
+}

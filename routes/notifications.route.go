@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func NotificationRouter(notification fiber.Router) {
+func NotificationRoute(notification fiber.Router) {
 	notification.Post("/notifications", controllers.CreateNotification)
 	notification.Delete("/notifications", controllers.DeleteNotification)
 	notification.Patch("/notifications", controllers.MarkNotificationIsRead)
