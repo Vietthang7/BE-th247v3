@@ -241,3 +241,11 @@ func GetStudentsBySubjectAndCenterId(subjectId, centerId uuid.UUID) ([]models.St
 	db.Find(&students)
 	return students, db.Error
 }
+
+func CheckStudentExists(studentID uuid.UUID) error {
+	var student Student
+	if err := app.Database.DB.Where("id = ?", studentID).First(&student).Error; err != nil {
+		return err
+	}
+	return nil
+}

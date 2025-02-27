@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func StudentNeedsRouter(student fiber.Router) {
+func StudentNeedsRoute(student fiber.Router) {
 
 	student.Use(mdw.AdminAuthentication)
 

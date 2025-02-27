@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Branch(branch fiber.Router) {
+func BranchRoute(branch fiber.Router) {
 	branch.Use(mdw.AdminAuthentication)
 	// Chi nhánh
 	branch.Post("/branches", mdw.Gate("branch", "create"), controllers.CreateBranch)

@@ -39,6 +39,10 @@ const (
 
 	ERROR_STUDENT_HAS_ASSIGNED = "ERROR_STUDENT_HAS_ASSIGNED"
 
+	// Document - Tài liệu
+	DocumentCannotUpdate = 2021 // Tài liệu đã áp dụng trong bài giảng. Không thể chỉnh sửa
+	DocumentCannotDelete = 2022 // Tài liệu đã áp dụng trong bài giảng. Không thể xóa
+
 	// category
 	ERROR_CATEGORY_HAS_CHILDREN        = 6072 // Danh mục đã có dữ liệu thuộc. Không thể xóa
 	ERROR_CATEGORY_HAS_DATA_DEPENDENCY = 6073 // Danh mục đã có dữ liệu thuộc. Không thể xóa
