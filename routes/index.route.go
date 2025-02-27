@@ -26,5 +26,6 @@ func AdminRoutes(app *fiber.App) {
 	Category(admin)
 	SubjectRoutes(admin)
 	ClassRoomRouter(admin)
+	LessonRoute(admin)
 	WorkSession(admin)
 }

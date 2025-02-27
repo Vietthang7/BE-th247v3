@@ -16,7 +16,7 @@ type Lesson struct {
 	FreeTrial     *bool          `gorm:"default:false" json:"free_trial"`
 	Position      uint64         `gorm:"default:1" json:"position,omitempty"`
 	Metadata      datatypes.JSON `json:"metadata,omitempty"`
-	ScheduleId    *uuid.UUID     `gorm:"default:null" json:"-"`
+	ScheduleId    uuid.UUID      `gorm:"default:null" json:"-"`
 	Subject       *Subject       `gorm:"foreignKey:SubjectId" json:"subject,omitempty"`
 	UserCreated   *User          `gorm:"foreignKey:CreatedBy" json:"created_by,omitempty"`
 	IsLive        *bool          `gorm:"default:false" json:"is_live,omitempty"`

@@ -2,8 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"gorm.io/datatypes"
 	"math/rand"
 	"net/mail"
+	"regexp"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -59,4 +61,26 @@ func generateRandomFiveDigitNumber() int {
 func GenerateRandomCodeFormatByKey(key string) string {
 	return key + strconv.Itoa(getLastTwoDigitsOfCurrentYear()) + strconv.Itoa(generateRandomFiveDigitNumber())
 	//strconv.Itoa(...) chuyển số nguyên thành chuỗi để có thể ghép nối.
+}
+func ContainSpecialCharacter(v string) bool {
+	pattern := `[!@#~$%^&*()_+|<>?:"\[\]{}\\\/;'’‘]`
+	re := regexp.MustCompile(pattern)
+	return re.FindString(v) != ""
+}
+func MixedDateAndTime(startTime *time.Time, gormTime *datatypes.Time) *time.Time {
+	if gormTime == nil || startTime == nil {
+		return nil
+	}
+	loc, err := time.LoadLocation("Local") // lấy thông tin múi giờ của hệ thống
+	if err != nil {
+		return nil
+	}
+	duration := time.Duration(*gormTime)
+	hour := duration / time.Hour
+	minutes := (duration % time.Hour) / time.Minute
+	seconds := (duration % time.Minute) / time.Second
+	nanoseconds := duration % time.Second
+	newTime := startTime.Add(time.Hour*time.Duration(hour) + time.Minute*time.Duration(minutes) + time.Second*time.Duration(seconds) + nanoseconds)
+	newTime = newTime.In(loc) //Chuyển đổi newTime về múi giờ cục bộ.
+	return &newTime
 }

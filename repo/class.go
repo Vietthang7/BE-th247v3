@@ -52,3 +52,16 @@ func PreloadClassroom(DB *gorm.DB, properties ...string) {
 		}
 	}
 }
+
+func GetClassByIdAndCenterId(id, centerId uuid.UUID) (models.Class, error) {
+	var class models.Class
+	db := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId)
+	db.Preload("StudentsClasses", func(db *gorm.DB) *gorm.DB {
+		return db.Limit(1)
+	})
+	db.Preload("Subject", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id", "name", "code")
+	})
+	db.First(&class)
+	return class, db.Error
+}
