@@ -20,3 +20,13 @@ func TeacherIsArranged(teacherId uuid.UUID) bool {
 	}
 	return false
 }
+func GetScheduleClassById(id uuid.UUID, centerId uuid.UUID) (models.ScheduleClass, error) {
+	var schedule models.ScheduleClass
+	db := app.Database.DB.Debug().Where("id = ? AND center_id = ?", id, centerId).First(&schedule)
+	return schedule, db.Error
+}
+func GetScheduleClassByIds(ids []uuid.UUID, centerId uuid.UUID) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+	db := app.Database.DB.Debug().Where("id IN ? AND center_id = ?", ids, centerId).Find(&schedules)
+	return schedules, db.Error
+}
