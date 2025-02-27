@@ -71,3 +71,12 @@ func GetBranchByIdAndCenterId(id, centerId uuid.UUID) (models.Branch, error) {
 	query := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId).First(&branch)
 	return branch, query.Error
 }
+func IsExistBranchInCenter(id, centerId uuid.UUID, isActive *bool) bool {
+	var branch models.Branch
+	query := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId)
+	if isActive != nil {
+		query.Where("is_active = ?", *isActive)
+	}
+	query.First(&branch)
+	return query.RowsAffected > 0
+}

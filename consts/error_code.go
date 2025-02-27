@@ -18,6 +18,7 @@ const (
 	ERROR_PERMISSION_DENIED                     = 6099 // Không có quyền truy cập
 	ERROR_DATA_LONGER                           = 6100 // Dữ liệu không phù hợp
 	ERROR_START_TIME_MUST_SMALLER_THAN_END_TIME = 6097 // Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc
+	ERROR_TYPE_NOT_FOUND                        = 6106 // Dữ liệu không phù hợp
 
 	// Auth
 	LoginFailed        = 2005 // Đăng nhập thất bại
@@ -73,5 +74,15 @@ const (
 	// work session
 	ERROR_WORK_SESSION_NAME_EXIST        = 6048 // Tên ca làm đã tồn tại
 	ERROR_WORK_SESSION_HAVE_DATA_DEPENDS = 6049 // Ca làm đã có dữ liệu thuộc. Không thể cập nhật
+	// class
+	ERROR_CLASS_NAME_REQUIRED                      = 6013 // Tên lớp học là bắt buộc
+	ERROR_CLASS_CODE_MIN_SIZE_6                    = 6014 // Mã lớp học tối thiểu 6 kí tự
+	ERROR_CLASS_CODE_MAX_SIZE_20                   = 6015 // Mã lớp học tối đa 20 kí tự
+	ERROR_CLASS_CODE_NOT_SUPPORT_SPECIAL_CHARACTER = 6016 // Mã lớp học không hỗ trợ kí tự đặc biệt
+	ERROR_CLASS_CODE_DUPLICATED                    = 6019 // Mã lớp học đã tồn tại
+	ERROR_CLASS_CAN_NOT_UPDATE_INPROGRESS          = 6024 // Không thể cập nhật lớp học đã diễn ra
+	ERROR_START_DAY_MUST_SMALLER_THAN_END_DAY      = 6098 // Ngày bắt đầu phải nhỏ hơn ngày kết thúc
 
+	//error detail
+	ERROR_SUBJECT_NOT_FOUND = "ERROR_SUBJECT_NOT_FOUND"
 )

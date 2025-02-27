@@ -84,3 +84,31 @@ func MixedDateAndTime(startTime *time.Time, gormTime *datatypes.Time) *time.Time
 	newTime = newTime.In(loc) //Chuyển đổi newTime về múi giờ cục bộ.
 	return &newTime
 }
+func UniqueSliceElements[T comparable](inputSlice []T) []T {
+	uniqueSlice := make([]T, 0, len(inputSlice))
+	seen := make(map[T]bool, len(inputSlice))
+	for _, element := range inputSlice {
+		if !seen[element] {
+			uniqueSlice = append(uniqueSlice, element)
+			seen[element] = true
+		}
+	}
+	return uniqueSlice
+}
+func ConvertStringToTime(v string) (*time.Time, error) {
+	layout := "2006-01-02T15:04:05.000Z"
+	time, err := time.Parse(layout, v)
+	time = *GetTimeLocation(time)
+	if err != nil {
+		return nil, err
+	}
+	return &time, nil
+}
+func GetTimeLocation(value time.Time) *time.Time {
+	loc, err := time.LoadLocation("Local")
+	if err != nil {
+		return nil
+	}
+	value = value.In(loc)
+	return &value
+}
