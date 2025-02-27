@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func DocsCategoriesRouter(docscategories fiber.Router) {
+func DocsCategoriesRoute(docscategories fiber.Router) {
 
 	docscategories.Use(mdw.AdminAuthentication)
 

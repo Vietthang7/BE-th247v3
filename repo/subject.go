@@ -1,12 +1,14 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func GetSubjectByIdsAndCenterId(ids []*uuid.UUID, centerId uuid.UUID, isActive *bool) ([]*models.Subject, error) {
@@ -140,4 +142,23 @@ func GetAllSubjectByCenterId(q consts.Query, centerId uuid.UUID) ([]models.Subje
 	}
 	db.Order("subjects.`created_at` DESC").Find(&subjects)
 	return subjects, db.Error
+}
+
+func CheckSubjectsExist(subjectIDs []uuid.UUID) error {
+	if len(subjectIDs) == 0 {
+		return nil
+	}
+
+	var count int64
+	if err := app.Database.DB.Model(&models.Subject{}).
+		Where("id IN (?)", subjectIDs).
+		Count(&count).Error; err != nil {
+		return errors.New("lỗi khi kiểm tra môn học")
+	}
+
+	if count != int64(len(subjectIDs)) {
+		return errors.New("một hoặc nhiều môn học không tồn tại")
+	}
+
+	return nil
 }

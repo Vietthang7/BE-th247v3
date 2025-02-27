@@ -1,12 +1,14 @@
 package repo
 
 import (
-	"github.com/google/uuid"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
+	"context"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetAllLessonBySubjectIdAndCenterId(subjectId, centerId uuid.UUID) ([]*models.Lesson, error) {
@@ -103,4 +105,11 @@ func GetListLessons(query consts.Query, centerId uuid.UUID) ([]models.Lesson, er
 	db.Where("parent_id IS NULL")
 	db.Order("position ASC, updated_at ASC").Find(&lessons)
 	return lessons, db.Error
+}
+
+func CountLessonData(query string, args []interface{}) (count int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	app.Database.DB.WithContext(ctx).Model(&models.LessonData{}).Where(query, args...).Count(&count)
+	return
 }

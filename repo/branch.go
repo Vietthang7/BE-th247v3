@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"intern_247/app"
 	"intern_247/models"
 
@@ -70,6 +71,17 @@ func GetBranchByIdAndCenterId(id, centerId uuid.UUID) (models.Branch, error) {
 	var branch models.Branch
 	query := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId).First(&branch)
 	return branch, query.Error
+}
+
+func CheckBranchIsActive(branchID uuid.UUID) error {
+	var branch Branch
+	if err := app.Database.DB.Where("id = ?", branchID).First(&branch).Error; err != nil {
+		return fmt.Errorf("%s", "Không tìm thấy chi nhánh")
+	}
+	if branch.IsActive == nil || !*branch.IsActive {
+		return fmt.Errorf("%s", "Chi nhánh không hoạt động")
+	}
+	return nil
 }
 func IsExistBranchInCenter(id, centerId uuid.UUID, isActive *bool) bool {
 	var branch models.Branch
