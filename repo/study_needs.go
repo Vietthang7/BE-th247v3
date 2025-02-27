@@ -3,7 +3,6 @@ package repo
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"intern_247/app"
 	"intern_247/models"
@@ -15,25 +14,6 @@ import (
 
 type StudyNeeds models.StudyNeeds
 type ListStudyNeeds []models.StudyNeeds
-
-func CheckStudentExists(studentID uuid.UUID) error {
-	var student Student
-	if err := app.Database.DB.Where("id = ?", studentID).First(&student).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
-func CheckBranchIsActive(branchID uuid.UUID) error {
-	var branch Branch
-	if err := app.Database.DB.Where("id = ?", branchID).First(&branch).Error; err != nil {
-		return fmt.Errorf("%s", "Không tìm thấy chi nhánh")
-	}
-	if branch.IsActive == nil || !*branch.IsActive {
-		return fmt.Errorf("%s", "Chi nhánh không hoạt động")
-	}
-	return nil
-}
 
 func (u *StudyNeeds) Create() error {
 	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
@@ -80,25 +60,6 @@ func (u *StudyNeeds) Create() error {
 
 		return nil
 	})
-}
-
-func CheckSubjectsExist(subjectIDs []uuid.UUID) error {
-	if len(subjectIDs) == 0 {
-		return nil
-	}
-
-	var count int64
-	if err := app.Database.DB.Model(&models.Subject{}).
-		Where("id IN (?)", subjectIDs).
-		Count(&count).Error; err != nil {
-		return errors.New("lỗi khi kiểm tra môn học")
-	}
-
-	if count != int64(len(subjectIDs)) {
-		return errors.New("một hoặc nhiều môn học không tồn tại")
-	}
-
-	return nil
 }
 
 func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds, error) {
