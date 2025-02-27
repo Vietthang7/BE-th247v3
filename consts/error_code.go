@@ -70,4 +70,8 @@ const (
 	// schedule class
 	ERROR_SCHEDULE_CLASS_LEARNED_CAN_NOT_DELETE = 6047 //Buổi học đã diễn ra. Không thể xóa
 
+	// work session
+	ERROR_WORK_SESSION_NAME_EXIST        = 6048 // Tên ca làm đã tồn tại
+	ERROR_WORK_SESSION_HAVE_DATA_DEPENDS = 6049 // Ca làm đã có dữ liệu thuộc. Không thể cập nhật
+
 )
