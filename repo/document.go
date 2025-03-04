@@ -34,6 +34,15 @@ func (d *Document) Create() error {
 		return err
 	}
 
+	if err := app.Database.DB.WithContext(ctx).
+		Preload("Creator", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, full_name")
+		}).
+		First(d, "id = ?", d.ID).Error; err != nil {
+		logrus.Error("Error fetching created Document with Creator info: ", err.Error())
+		return err
+	}
+
 	return nil
 }
 

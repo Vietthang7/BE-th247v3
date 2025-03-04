@@ -34,7 +34,7 @@ func CreateDocument(c *fiber.Ctx) error {
 			fmt.Sprintf("%s: %s", consts.CreateFail, err.Error()), consts.CreateFailed)
 	}
 
-	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, nil)
+	return ResponseSuccess(c, fiber.StatusOK, consts.CreateSuccess, entry)
 }
 
 func ReadDocument(c *fiber.Ctx) error {

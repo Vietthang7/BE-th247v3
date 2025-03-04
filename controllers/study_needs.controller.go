@@ -52,11 +52,15 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusNotFound, consts.GetFailed, "Môn học không tồn tại")
 	}
 
-	// Kiểm tra WorkSession có tồn tại không
+	// Kiểm tra WorkSession
 	for _, timeSlot := range entry.TimeSlots {
 		if err := repo.CheckWorkSessionExists(timeSlot.WorkSessionId); err != nil {
 			return ResponseError(c, fiber.StatusNotFound, consts.GetFailed,
 				fmt.Sprintf("Work session với ID %s không tồn tại", timeSlot.WorkSessionId))
+		}
+
+		if err := repo.CheckWorkSessionIsActive(timeSlot.WorkSessionId); err != nil {
+			return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, err.Error())
 		}
 	}
 
