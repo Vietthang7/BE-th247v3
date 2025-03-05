@@ -87,6 +87,15 @@ const (
 	ERROR_CLASS_CAN_NOT_UPDATE_INPROGRESS          = 6024 // Không thể cập nhật lớp học đã diễn ra
 	ERROR_START_DAY_MUST_SMALLER_THAN_END_DAY      = 6098 // Ngày bắt đầu phải nhỏ hơn ngày kết thúc
 
+	//class holiday
+	ERROR_CLASS_HOLIDAY_REQUIRED                              = 6220 // Tên ngày nghỉ bắt buộc nhập
+	ERROR_CLASS_HOLIDAY_NAME_CONTAIN_SPECIAL_CHARACTER        = 6221 //Tên ngày nghỉ không hỗ trợ kí tự đặc biệt
+	ERROR_CLASS_HOLIDAY_DESCRIPTION_CONTAIN_SPECIAL_CHARACTER = 6222 //Tên ngày nghỉ không hỗ trợ kí tự đặc biệt
+	ERROR_HOLIDAY_ALREADY_EXIST_IN_SYSTEM                     = 6223 //Lịch nghỉ này đã có trên hệ thống, vui lòng thêm mới ngày nghỉ khác
+	ERROR_INVALID_CLASS_ID                                    = 6226 // Class id không tồn tại
+	ERROR_INVALID_CLASS_HOLIDAY_ID                            = 6227 // Class holiday id không tồn tại
+	ERROR_CLASS_HOLIDAY_NOT_FOUND                             = 6228 // Không tìm thấy ngày nghỉ
+
 	//error detail
 	ERROR_SUBJECT_NOT_FOUND = "ERROR_SUBJECT_NOT_FOUND"
 )
