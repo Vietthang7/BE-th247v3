@@ -31,4 +31,5 @@ func AdminRoutes(app *fiber.App) {
 	DocumentRoute(admin)
 	ClassRoute(admin)
 	ClassHolidayRoute(admin)
+	TeachingScheduleRoute(admin)
 }

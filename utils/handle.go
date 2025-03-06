@@ -2,13 +2,14 @@ package utils
 
 import (
 	"fmt"
-	"gorm.io/datatypes"
 	"math/rand"
 	"net/mail"
 	"regexp"
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"gorm.io/datatypes"
 )
 
 func IsVerifiedEmail(status *bool) bool {
@@ -111,4 +112,18 @@ func GetTimeLocation(value time.Time) *time.Time {
 	}
 	value = value.In(loc)
 	return &value
+}
+
+func ChunkArray[T any](arr []T, chunkSize int) [][]T {
+	var chunkedArr [][]T
+
+	for i := 0; i < len(arr); i += chunkSize {
+		end := i + chunkSize
+		if end > len(arr) {
+			end = len(arr)
+		}
+		chunkedArr = append(chunkedArr, arr[i:end])
+	}
+
+	return chunkedArr
 }
