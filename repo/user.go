@@ -494,3 +494,8 @@ func GetTeachersByIdsAndCenterId(ids []uuid.UUID, centerId uuid.UUID) ([]*models
 	query := app.Database.DB.Select("id", "full_name").Where("center_id = ? AND is_active = ? AND position = ?", centerId, true, consts.Teacher).Find(&teachers, ids)
 	return teachers, query.Error
 }
+func GetAsistantsByIdsAndCenterId(ids []uuid.UUID, centerId uuid.UUID) ([]models.User, error) {
+	var asistants []models.User
+	query := app.Database.Select("id", "full_name").Where("center_id = ? AND is_active = ? AND position = ? AND id IN ?", centerId, true, consts.TeachingAssistant, ids).Find(&asistants)
+	return asistants, query.Error
+}

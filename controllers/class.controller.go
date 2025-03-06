@@ -87,7 +87,7 @@ func CreateClass(c *fiber.Ctx) error {
 	if err == nil {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.ERROR_CLASS_CODE_DUPLICATED)
 	}
-	if input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_OFFLINE {
+	if input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_HYBRID {
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid", consts.ERROR_TYPE_NOT_FOUND)
 	}
 	//TODO - CHECK PLAN apply

@@ -20,7 +20,6 @@ func IsActiveData(active *bool) bool {
 
 // Index trả về chỉ số xuất hiện đầu tiên của v trong s,
 // hoặc -1 nếu không có.
-
 func Index[S ~[]E, E comparable](s S, v E) int {
 	for i := range s {
 		if v == s[i] {
@@ -111,4 +110,10 @@ func GetTimeLocation(value time.Time) *time.Time {
 	}
 	value = value.In(loc)
 	return &value
+}
+func IsDateInRange(start1, start2, end2 time.Time) bool {
+	start1 = start1.Truncate(24 * time.Hour) // chỉ giữ lại phần ngày
+	start2 = start2.Truncate(24 * time.Hour) // chỉ giữ lại phần ngày
+	end2 = end2.Truncate(24 * time.Hour)     // chỉ giữ lại phần ngày
+	return !start1.Before(start2) && !start1.After(end2)
 }

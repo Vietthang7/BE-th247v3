@@ -516,3 +516,13 @@ func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
 //	}
 //
 //}
+
+func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, error) {
+	var class models.Class
+	db := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId)
+	db.Preload("Subject", func(db1 *gorm.DB) *gorm.DB {
+		return db1.Select("id", "total_lessons")
+	})
+	db.First(&class)
+	return class, db.Error
+}
