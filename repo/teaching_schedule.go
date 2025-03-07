@@ -12,20 +12,20 @@ import (
 	"gorm.io/datatypes"
 )
 
-// CreateTeachingSchedule xử lý logic tạo lịch giảng dạy
 func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSchedule, error) {
-	// Kiểm tra UserId có hợp lệ không
 	if form.UserId == uuid.Nil {
 		return nil, fmt.Errorf("UserId is required")
 	}
 
-	// Kiểm tra User có tồn tại không
-	var user models.User
-	if err := app.Database.DB.First(&user, "id = ?", form.UserId).Error; err != nil {
+	// Lấy CenterId của User
+	var user struct {
+		CenterId uuid.UUID
+	}
+	if err := app.Database.DB.Table("users").Select("center_id").Where("id = ?", form.UserId).Scan(&user).Error; err != nil {
 		return nil, fmt.Errorf("User not found")
 	}
 
-	// Chuyển đổi StartDate và EndDate sang time.Time
+	// Chuyển đổi StartDate và EndDate
 	startDate, err := time.Parse("2006-01-02", form.StartDate)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Invalid start date format")
@@ -39,6 +39,7 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 	// Tạo TeachingSchedule mới
 	newSchedule := models.TeachingSchedule{
 		UserId:     form.UserId,
+		CenterId:   user.CenterId,
 		StartDate:  startDate,
 		EndDate:    endDate,
 		IsOnline:   form.IsOnline,
@@ -48,7 +49,6 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 		UserShifts: form.UserShifts,
 	}
 
-	// Lưu TeachingSchedule vào database
 	if err := app.Database.DB.Create(&newSchedule).Error; err != nil {
 		return nil, fmt.Errorf("%s", "Failed to create teaching schedule")
 	}
@@ -68,6 +68,7 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 
 		timeSlots[i].ScheduleId = newSchedule.ID
 		timeSlots[i].UserId = &form.UserId
+		timeSlots[i].CenterId = &user.CenterId
 	}
 
 	// Lưu TimeSlots vào database
@@ -77,40 +78,31 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 		}
 	}
 
-	// Kiểm tra TeachingSchedule đã tồn tại chưa
-	var existingSchedule models.TeachingSchedule
-	if err := app.Database.DB.First(&existingSchedule, "user_id = ?", form.UserId).Error; err != nil {
-		return nil, fmt.Errorf("%s", "Teaching schedule not found")
-	}
-
 	// Parse danh sách UserShifts
 	var rawUserShifts []models.Shift
 	if err := json.Unmarshal(form.UserShifts, &rawUserShifts); err != nil {
 		return nil, fmt.Errorf("%s", "Invalid user_shifts format")
 	}
 
-	// Chuyển đổi weekday của Go sang hệ thống
 	convertWeekday := func(w time.Weekday) int {
 		if w == 0 {
 			return 1 // Chủ Nhật = 1
 		}
-		return int(w) + 1 // Thứ Hai = 2, Thứ Ba = 3, ...
+		return int(w) + 1
 	}
 
 	// Lưu danh sách các Shift
 	var userShifts []models.Shift
-
 	for _, rawShift := range rawUserShifts {
-		// Kiểm tra WorkSessionId có tồn tại và active không
 		var workSession models.WorkSession
 		if err := app.Database.DB.First(&workSession, "id = ? AND is_active = ?", rawShift.WorkSessionId, true).Error; err != nil {
 			return nil, fmt.Errorf("%s", "Invalid or inactive work session")
 		}
 
-		// Lặp qua các ngày trong khoảng StartDate - EndDate
+		// Lặp qua ngày từ StartDate đến EndDate
 		for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
 			if convertWeekday(d.Weekday()) == rawShift.DayOfWeek {
-				// Tìm TimeSlotId phù hợp với WorkSessionId của newSchedule
+				// Tìm TimeSlotId phù hợp
 				var timeSlotId uuid.UUID
 				for _, ts := range timeSlots {
 					if ts.WorkSessionId == rawShift.WorkSessionId {
@@ -120,13 +112,14 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 				}
 
 				userShifts = append(userShifts, models.Shift{
-					ScheduleId:    newSchedule.ID, // ✅ Dùng schedule mới tạo
+					ScheduleId:    newSchedule.ID,
 					UserId:        &form.UserId,
+					CenterId:      user.CenterId,
 					WorkSessionId: rawShift.WorkSessionId,
 					DayOfWeek:     rawShift.DayOfWeek,
 					Date:          d,
 					Type:          "user",
-					TimeSlotId:    timeSlotId, // ✅ Liên kết với TimeSlot từ schedule mới
+					TimeSlotId:    timeSlotId,
 				})
 			}
 		}
@@ -255,9 +248,11 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 		return nil, fmt.Errorf("UserId is required")
 	}
 
-	// Kiểm tra User có tồn tại không
-	var user models.User
-	if err := app.Database.DB.First(&user, "id = ?", form.UserId).Error; err != nil {
+	// Lấy CenterId của User
+	var user struct {
+		CenterId uuid.UUID
+	}
+	if err := app.Database.DB.Table("users").Select("center_id").Where("id = ?", form.UserId).Scan(&user).Error; err != nil {
 		log.Printf("Error: User not found with ID %v: %v", form.UserId, err)
 		return nil, fmt.Errorf("User not found")
 	}
@@ -275,6 +270,7 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 
 	// Cập nhật thông tin lịch giảng dạy
 	schedule.UserId = form.UserId
+	schedule.CenterId = user.CenterId
 	schedule.StartDate = startDate
 	schedule.EndDate = endDate
 	schedule.IsOnline = form.IsOnline
@@ -305,6 +301,7 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 
 		timeSlots[i].ScheduleId = schedule.ID
 		timeSlots[i].UserId = &form.UserId
+		timeSlots[i].CenterId = &user.CenterId
 	}
 
 	// Lưu TimeSlots vào database
@@ -351,13 +348,14 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 				}
 
 				userShifts = append(userShifts, models.Shift{
-					ScheduleId:    schedule.ID, // ✅ Dùng schedule hiện có
+					ScheduleId:    schedule.ID,
 					UserId:        &form.UserId,
 					WorkSessionId: rawShift.WorkSessionId,
 					DayOfWeek:     rawShift.DayOfWeek,
 					Date:          d,
 					Type:          "user",
-					TimeSlotId:    timeSlotId, // ✅ Liên kết với TimeSlot
+					TimeSlotId:    timeSlotId,
+					CenterId:      user.CenterId,
 				})
 			}
 		}
@@ -370,7 +368,7 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 		}
 	}
 
-	// 🔹 **Lấy danh sách TimeSlots sau khi cập nhật chỉ với các trường cần thiết**
+	// Lấy danh sách TimeSlots sau khi cập nhật
 	var updatedTimeSlots []struct {
 		ID            uuid.UUID `json:"id"`
 		ScheduleID    uuid.UUID `json:"schedule_id"`
@@ -384,7 +382,7 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 		Select("id, schedule_id, work_session_id, start_time, end_time").
 		Find(&updatedTimeSlots)
 
-	// 🔹 **Lấy danh sách UserShifts sau khi cập nhật chỉ với các trường cần thiết**
+	// Lấy danh sách UserShifts sau khi cập nhật
 	var updatedUserShifts []struct {
 		ID            uuid.UUID `json:"id"`
 		WorkSessionID uuid.UUID `json:"work_session_id"`
