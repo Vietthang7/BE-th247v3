@@ -8,7 +8,6 @@ import (
 )
 
 func WorkSessionRoute(WorkSession fiber.Router) {
-	WorkSession.Use(mdw.AdminAuthentication)
 	WorkSession.Post("/work-session", mdw.Gate("work_session", "create"), controllers.CreateWorkSession)
 	WorkSession.Get("/work-sessions", mdw.Gate("work_session", "list"), controllers.GetListWorkSessions)
 	WorkSession.Get("/work-sessions/schedule", mdw.Gate("work_session", "list"), controllers.ListWorkSessionForSchedule)

@@ -8,7 +8,6 @@ import (
 )
 
 func BranchRoute(branch fiber.Router) {
-	branch.Use(mdw.AdminAuthentication)
 	// Chi nhánh
 	branch.Post("/branches", mdw.Gate("branch", "create"), controllers.CreateBranch)
 	branch.Get("/branches", mdw.Gate("branch", "list"), controllers.ListBranches)

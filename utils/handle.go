@@ -21,6 +21,7 @@ func IsActiveData(active *bool) bool {
 
 // Index trả về chỉ số xuất hiện đầu tiên của v trong s,
 // hoặc -1 nếu không có.
+
 func Index[S ~[]E, E comparable](s S, v E) int {
 	for i := range s {
 		if v == s[i] {

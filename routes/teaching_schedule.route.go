@@ -8,7 +8,6 @@ import (
 )
 
 func TeachingScheduleRoute(TeachingSchedule fiber.Router) {
-	TeachingSchedule.Use(mdw.AdminAuthentication)
 
 	TeachingSchedule.Post("/teach-schedule", mdw.Gate("TeachingSchedule", "create"), controllers.CreateTeachSchedule)
 	TeachingSchedule.Delete("/teach-schedule/:id", mdw.Gate("TeachingSchedule", "create"), controllers.DeleteTeachSchedule)

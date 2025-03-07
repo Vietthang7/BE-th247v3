@@ -3,11 +3,12 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	mdw "intern_247/middleware"
 )
 
 func AdminRoutes(app *fiber.App) {
 	// Define a group for admin routes
-	admin := app.Group("/api/admin")
+	admin := app.Group("/api/admin", mdw.AdminAuthentication)
 	auth := app.Group("/api/auth")
 
 	// Call CenterRouter to register its routes

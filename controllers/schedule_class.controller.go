@@ -202,11 +202,12 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		input.Weeks = Weeks
 		dates := handleGetDateNotInHoliday(Weeks, int(class.TotalLessons), *class.StartAt, holidays)
 		checkFirstDay := dates[0].Weekday()
+		fmt.Println("day la checkFirstDay")
 		fmt.Println(checkFirstDay)
 		//firstDayIndex := utils.Index(Weeks, int(checkFirstDay))
 	}
 	if isChangeType {
-		fmt.Println("ok")
+		fmt.Println("okhehe")
 	}
 	return ResponseSuccess(c, fiber.StatusCreated, "Success", nil)
 }

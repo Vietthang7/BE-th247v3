@@ -1,15 +1,11 @@
 package routes
 
 import (
-	"intern_247/controllers"
-	mdw "intern_247/middleware"
-
 	"github.com/gofiber/fiber/v2"
+	"intern_247/controllers"
 )
 
 func ClassHolidayRoute(classHoliday fiber.Router) {
-
-	classHoliday.Use(mdw.AdminAuthentication)
 
 	classHoliday.Post("/class-holiday", controllers.CreateClassHoliday)
 	classHoliday.Get("/class-holiday", controllers.GetListClassHoliday)

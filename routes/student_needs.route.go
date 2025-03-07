@@ -9,8 +9,6 @@ import (
 
 func StudentNeedsRoute(student fiber.Router) {
 
-	student.Use(mdw.AdminAuthentication)
-
 	// Nhu cầu học tập - Học viên
 	student.Post("/study-needs", mdw.Gate2("create", "student", "potential-student", "trial-student"), controllers.CreateStudyNeeds)
 	student.Get("/list-study-needs", mdw.Gate2("read", "student", "potential-student", "trial-student"), controllers.ReadStudyNeeds)

@@ -8,7 +8,6 @@ import (
 )
 
 func SubjectRoutes(subject fiber.Router) {
-	subject.Use(mdw.AdminAuthentication)
 	subject.Post("/subject", mdw.Gate("subject", "create"), controllers.CreateSubject)
 	subject.Patch("/subject", mdw.Gate("subject", "update"), controllers.UpdateSubject)
 	subject.Delete("/subject", mdw.Gate("subject", "delete"), controllers.DeleteSubject)

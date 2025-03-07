@@ -7,7 +7,6 @@ import (
 )
 
 func PermissionRoutes(permission fiber.Router) {
-	permission.Use(mdw.AdminAuthentication)
 	// Quyền
 	permission.Post("/permissions", controllers.CreatePermission)
 	// Tag quyền
