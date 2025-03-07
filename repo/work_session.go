@@ -132,3 +132,23 @@ func CheckWorkSessionExists(workSessionID uuid.UUID) error {
 
 	return nil
 }
+
+func CheckWorkSessionIsActive(workSessionID uuid.UUID) error {
+	var active bool
+	err := app.Database.DB.
+		Model(&models.WorkSession{}).
+		Select("is_active").
+		Where("id = ?", workSessionID).
+		Scan(&active).Error
+
+	if err != nil {
+		logrus.Error("Failed to check WorkSession status:", err)
+		return fmt.Errorf("lỗi kiểm tra trạng thái WorkSession")
+	}
+
+	if !active {
+		return fmt.Errorf("WorkSession với ID %s không hoạt động", workSessionID)
+	}
+
+	return nil
+}

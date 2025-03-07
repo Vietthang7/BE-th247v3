@@ -2,13 +2,14 @@ package utils
 
 import (
 	"fmt"
-	"gorm.io/datatypes"
 	"math/rand"
 	"net/mail"
 	"regexp"
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"gorm.io/datatypes"
 )
 
 func IsVerifiedEmail(status *bool) bool {

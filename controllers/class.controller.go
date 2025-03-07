@@ -2,15 +2,16 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"gorm.io/datatypes"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
 	"intern_247/utils"
 	"strconv"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type NewClassInput struct {

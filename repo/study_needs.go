@@ -45,11 +45,10 @@ func (u *StudyNeeds) Create() error {
 			}
 		}
 
-		// ✅ Thêm StudentSubject với SubjectId
 		if len(u.SubjectIds) == 1 {
 			studentSubject := StudentSubject{
 				StudentId: u.StudentId,
-				SubjectId: u.SubjectIds[0], // ✅ Đã có SubjectId trong struct
+				SubjectId: u.SubjectIds[0],
 			}
 
 			if err := tx.Create(&studentSubject).Error; err != nil {
@@ -74,7 +73,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 		return nil, err
 	}
 
-	// ⚠️ Lấy danh sách subject_id từ student_subjects theo student_id
+	// Lấy danh sách subject_id từ student_subjects theo student_id
 	var subjectIds []uuid.UUID
 	err = app.Database.DB.
 		Table("student_subjects").
@@ -87,7 +86,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 	}
 	studyNeeds.SubjectIds = subjectIds
 
-	// 🔹 Lấy danh sách tất cả student_schedules của học viên
+	// Lấy danh sách tất cả student_schedules của học viên
 	var studentSchedules []StudentSchedule
 	err = app.Database.DB.
 		Where("student_id = ?", studyNeeds.StudentId).
@@ -101,7 +100,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 	var allShortShifts []models.ShortShift
 
 	for _, schedule := range studentSchedules {
-		// 🔹 Lấy danh sách TimeSlots theo schedule_id
+		// Lấy danh sách TimeSlots theo schedule_id
 		var timeSlots []models.TimeSlot
 		err = app.Database.DB.
 			Where("schedule_id = ?", schedule.ID).
@@ -112,7 +111,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 		}
 		allTimeSlots = append(allTimeSlots, timeSlots...)
 
-		// 🔹 Lấy danh sách ShortShifts theo schedule_id
+		// Lấy danh sách ShortShifts theo schedule_id
 		var rawShortShifts []struct {
 			WorkSessionId uuid.UUID
 			DayOfWeek     string // Nhận dữ liệu JSON dưới dạng chuỗi
@@ -129,7 +128,7 @@ func GetStudyNeedsByID(studyNeedsID uuid.UUID, centerID uuid.UUID) (*StudyNeeds,
 			return nil, err
 		}
 
-		// 🔹 Chuyển đổi JSON string thành slice []int
+		// Chuyển đổi JSON string thành slice []int
 		for _, raw := range rawShortShifts {
 			var days []int
 			if err := json.Unmarshal([]byte(raw.DayOfWeek), &days); err != nil {

@@ -1,9 +1,10 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	"time"
 )
 
 type TeachingSchedule struct {
@@ -19,5 +20,16 @@ type TeachingSchedule struct {
 	//TimeSlots []TimeSlot  `json:"time_slots"`
 	TimeSlots datatypes.JSON `json:"time_slots" gorm:"-"`
 	//UserShifts []Shift    `json:"user_shifts"`
+	UserShifts datatypes.JSON `json:"user_shifts" gorm:"-"`
+}
+
+type CreateTeachScheForm struct {
+	UserId     uuid.UUID      `json:"user_id"`
+	IsOnline   *bool          `json:"is_online"`
+	IsOffline  *bool          `json:"is_offline"`
+	Notes      string         `json:"notes"`
+	StartDate  string         `json:"start_date"`
+	EndDate    string         `json:"end_date"`
+	TimeSlots  datatypes.JSON `json:"time_slots" gorm:"-"`
 	UserShifts datatypes.JSON `json:"user_shifts" gorm:"-"`
 }

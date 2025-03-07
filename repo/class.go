@@ -3,14 +3,15 @@ package repo
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/samber/lo"
-	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/helpers"
 	"intern_247/models"
 	"intern_247/utils"
+
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"gorm.io/gorm"
 )
 
 func GetClassesBySubjectIdAndCenterId(subjectId, centerId uuid.UUID) ([]models.Class, error) {

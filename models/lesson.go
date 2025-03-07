@@ -9,7 +9,7 @@ type Lesson struct {
 	Model         `gorm:"embedded"`
 	Name          string         `gorm:"size:250" json:"name"`
 	ParentId      *uuid.UUID     `gorm:"default:null" json:"-"`
-	SubjectId     *uuid.UUID     `gorm:"default:null" json:"-"`
+	SubjectId     *uuid.UUID     `gorm:"default:null"`
 	ClassId       *uuid.UUID     `gorm:"default:null" json:"-"`
 	CenterId      uuid.UUID      `json:"-"`
 	CreatedBy     uuid.UUID      `json:"-"`

@@ -2,18 +2,19 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
-	"github.com/teambition/rrule-go"
-	"gorm.io/datatypes"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
 	"intern_247/utils"
 	"sort"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
+	"github.com/teambition/rrule-go"
+	"gorm.io/datatypes"
 )
 
 type NewScheduleClassInput struct {

@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Shift struct {
@@ -21,4 +22,5 @@ type Shift struct {
 type ShortShift struct {
 	WorkSessionId uuid.UUID `json:"work_session_id"`
 	DayOfWeek     []int     `json:"day_of_week"`
+	Date          time.Time `json:"date"`
 }
