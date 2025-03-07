@@ -8,15 +8,13 @@ import (
 )
 
 func AdminRoutes(app *fiber.App) {
+	app.Use(cors.New())
 	// Define a group for admin routes
 	admin := app.Group("/api/admin")
 	admin.Use(logger.New())
 	admin.Use(mdw.AdminAuthentication)
 	//admin := app.Group("/api/admin", mdw.AdminAuthentication)
 	auth := app.Group("/api/auth")
-
-	// Call CenterRouter to register its routes
-	app.Use(cors.New())
 	CenterRouter(admin)
 	AuthRoute(auth)
 	StudentNeedsRoute(admin)
