@@ -396,7 +396,7 @@ func GetListClassesByQueryAndCenterId(q consts.Query, centerId uuid.UUID, token 
 		db.Where("classes.branch_id = ?", *token.BranchId)
 	}
 	classCount.Scan(&overview)
-	db.Debug().Offset(q.GetOffset()).Limit(q.GetPageSize()).Find(&classes)
+	db.Offset(q.GetOffset()).Limit(q.GetPageSize()).Find(&classes)
 	_ = db.Group("classes.id").Count(&pagination.TotalResults)
 	pagination.CurrentPage = q.GetPage()
 	pagination.TotalPages = pagination.GetTotalPages(q.GetPageSize())

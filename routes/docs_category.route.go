@@ -1,16 +1,11 @@
 package routes
 
 import (
-	"intern_247/controllers"
-	mdw "intern_247/middleware"
-
 	"github.com/gofiber/fiber/v2"
+	"intern_247/controllers"
 )
 
 func DocsCategoriesRoute(docscategories fiber.Router) {
-
-	docscategories.Use(mdw.AdminAuthentication)
-
 	// Danh mục taif liệu
 	docscategories.Post("/docs-categories", controllers.CreateDocsCategory)
 	docscategories.Get("/docs-categories/:id", controllers.ReadDocsCategory)

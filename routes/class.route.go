@@ -7,7 +7,6 @@ import (
 )
 
 func ClassRoute(class fiber.Router) {
-	class.Use(mdw.AdminAuthentication)
 	class.Post("/class", mdw.Gate("class", "create"), controllers.CreateClass)
 	class.Get("/class/:id", mdw.Gate("class", "read"), controllers.GetDetailClass)
 	class.Patch("/class", mdw.Gate("class", "update"), controllers.UpdateClass)

@@ -9,8 +9,6 @@ import (
 
 func CategoryRoute(category fiber.Router) {
 
-	category.Use(mdw.AdminAuthentication)
-
 	category.Post("/category", mdw.Gate("category", "create"), controllers.CreateCategory)
 	category.Get("/category/:id", mdw.Gate("category", "read"), controllers.ReadCategory)
 	category.Get("/category", controllers.ReadListCategory)

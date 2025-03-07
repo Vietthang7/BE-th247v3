@@ -8,7 +8,6 @@ import (
 )
 
 func CenterRouter(center fiber.Router) {
-	center.Use(mdw.AdminAuthentication)
 	center.Get("/center", mdw.Gate("center", "read"), controllers.ReadCenter)
 	center.Put("/center", mdw.Gate("center", "update"), controllers.UpdateCenter)
 	center.Post("/center", controllers.CreateCenter)

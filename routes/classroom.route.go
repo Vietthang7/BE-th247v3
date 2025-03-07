@@ -7,7 +7,6 @@ import (
 )
 
 func ClassRoomRouter(classroom fiber.Router) {
-	classroom.Use(mdw.AdminAuthentication)
 	classroom.Post("/classrooms", mdw.Gate("classroom", "create"), controllers.CreateClassroom)
 	classroom.Put("/classrooms/:id", mdw.Gate("classroom", "update"), controllers.UpdateClassroom)
 	classroom.Get("/classrooms/:id", mdw.Gate("classroom", "read"), controllers.ReadClassroom)

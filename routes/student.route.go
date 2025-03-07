@@ -8,7 +8,6 @@ import (
 )
 
 func StudentRouter(student fiber.Router) {
-	student.Use(mdw.AdminAuthentication)
 	//potential-student : sinh viên tiềm năng
 	//trial-student : sinh viên học thử
 	student.Post("/students", mdw.Gate2("create", "student", "potential-student", "trial-student"), controllers.CreateStudent)

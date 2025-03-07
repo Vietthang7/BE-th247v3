@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -17,7 +16,6 @@ import (
 
 func AdminAuthentication(c *fiber.Ctx) error {
 	path := c.Path()
-	fmt.Println(path)
 	if strings.Contains(path, "api/admin/login") {
 		return c.Next()
 	} else {
