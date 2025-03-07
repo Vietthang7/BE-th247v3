@@ -468,3 +468,62 @@ func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
 	app.Database.DB.Model(&models.SessionAttendance{}).WithContext(ctx).Where("class_id = ? AND student_id = ?", classId, studentId).Count(&count)
 	return count
 }
+
+//func ListStudentByEnrollmentPlan(classId uuid.UUID, centerId uuid.UUID, p *consts.RequestTable, query interface{}, args []interface{}) ([]*models.Student, error) {
+//	var (
+//		students    []*models.Student
+//		class       *models.Class
+//		err         error
+//		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+//	)
+//	defer cancel()
+//	err = app.Database.DB.WithContext(ctx).Where("id = ? AND center_id = ?", classId, centerId).
+//		Preload("Subject").Preload("Branch").First(&class).Error
+//	if err != nil {
+//		return nil, err
+//	}
+//	// TODO: Xử lý lọc danh sách kế hoạch tuyển sinh của lớp học
+//	db := app.Database.DB.WithContext(ctx).Model(&models.Student{}).Where("students.type = ?", consts.Official).
+//		Preload("Subjects")
+//	db = db.Joins("JOIN study_needs ON study_needs.student_id = students.id").Where(query, args...).
+//		Where("study_needs.studying_start_date <= ? OR study_needs.studying_start_date IS NULL", class.StartAt).
+//		Where("(students.id) NOT IN (SELECT student_id FROM student_classes WHERE class_id = ?)", classId) //Loại bỏ học viên đã đăng ký lớp này (student_classes).
+//	if class.BranchId != uuid.Nil {
+//		db = db.Where("study_needs.branch_id = ?", class.BranchId)
+//	}
+//	switch class.Type {
+//	case 1: // Online
+//		db = db.Where("study_needs.is_online_form = ?", true)
+//	case 2: //Offline
+//		db = db.Where("study_needs.is_offline_form = ?", true)
+//	case 3: //Hybrid
+//		db = db.Where("study_needs.is_online_form = ? OR study_needs.is_offline_form = ?", true, true)
+//	}
+//	err = db.Find(&students).Error
+//	if err != nil {
+//		return nil, err
+//	}
+//	// lọc học viên dựa trên môn học
+//	var (
+//		mark                    = make(map[uuid.UUID]*models.Student)
+//		studentIds, hasSchedule []uuid.UUID
+//	)
+//	for _, student := range students {
+//		_, uniqueSubjectIds, _ := CountUnclassifiedsubjects(student.ID)
+//		if utils.Contains(uniqueSubjectIds, class.SubjectId) {
+//			mark[student.ID] = student
+//			studentIds = append(studentIds, student.ID)
+//		}
+//	}
+//
+//}
+
+func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, error) {
+	var class models.Class
+	db := app.Database.DB.Where("id = ? AND center_id = ?", id, centerId)
+	db.Preload("Subject", func(db1 *gorm.DB) *gorm.DB {
+		return db1.Select("id", "total_lessons")
+	})
+	db.First(&class)
+	return class, db.Error
+}

@@ -3,6 +3,8 @@ package models
 import (
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
+	"intern_247/consts"
 	"time"
 )
 
@@ -75,4 +77,18 @@ type ClassOverview struct {
 	InProgress int64 `json:"in_progress"`
 	Finished   int64 `json:"finished"`
 	Canceled   int64 `json:"canceled"`
+}
+
+func (c *Class) AfterFind(*gorm.DB) error {
+	if c.Status == consts.CLASS_CANCELED || c.Status == consts.CLASS_FINISHED {
+		return nil
+	}
+	c.Status = consts.CLASS_COMING_SOON
+	if c.StartAt != nil && time.Now().After(*c.StartAt) {
+		c.Status = consts.CLASS_IN_PROGRESS
+	}
+	if c.EndAt != nil && time.Now().After(*c.EndAt) {
+		c.Status = consts.CLASS_FINISHED
+	}
+	return nil
 }

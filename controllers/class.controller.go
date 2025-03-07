@@ -49,6 +49,7 @@ type ClassUpdateInput struct {
 }
 
 func CreateClass(c *fiber.Ctx) error {
+	fmt.Println("CreateClass")
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
 		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
@@ -82,11 +83,12 @@ func CreateClass(c *fiber.Ctx) error {
 			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.ERROR_START_TIME_MUST_SMALLER_THAN_END_TIME)
 		}
 	}
+	fmt.Println("ok")
 	class, err := repo.GetClassByCodeAndCenterId(input.Code, uuid.Nil, *user.CenterId)
 	if err == nil {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.ERROR_CLASS_CODE_DUPLICATED)
 	}
-	if input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_OFFLINE {
+	if input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_HYBRID {
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid", consts.ERROR_TYPE_NOT_FOUND)
 	}
 	//TODO - CHECK PLAN apply

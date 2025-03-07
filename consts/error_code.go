@@ -86,6 +86,7 @@ const (
 	ERROR_CLASS_CODE_DUPLICATED                    = 6019 // Mã lớp học đã tồn tại
 	ERROR_CLASS_CAN_NOT_UPDATE_INPROGRESS          = 6024 // Không thể cập nhật lớp học đã diễn ra
 	ERROR_START_DAY_MUST_SMALLER_THAN_END_DAY      = 6098 // Ngày bắt đầu phải nhỏ hơn ngày kết thúc
+	ERROR_SCHEDULE_CLASS_ATTENDANCED               = 6042 // Lớp học đã điểm danh, không thể xếp lịch
 
 	//class holiday
 	ERROR_CLASS_HOLIDAY_REQUIRED                              = 6220 // Tên ngày nghỉ bắt buộc nhập

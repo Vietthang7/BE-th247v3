@@ -3,8 +3,11 @@ package repo
 import (
 	"context"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"intern_247/app"
+	"intern_247/consts"
 	"intern_247/models"
+	"intern_247/utils"
 )
 
 // TeacherIsArranged Kiểm tra xem giáo viên có được sắp xếp dạy lớp nào không.
@@ -28,5 +31,44 @@ func GetScheduleClassById(id uuid.UUID, centerId uuid.UUID) (models.ScheduleClas
 func GetScheduleClassByIds(ids []uuid.UUID, centerId uuid.UUID) ([]models.ScheduleClass, error) {
 	var schedules []models.ScheduleClass
 	db := app.Database.DB.Debug().Where("id IN ? AND center_id = ?", ids, centerId).Find(&schedules)
+	return schedules, db.Error
+}
+func GetSingleScheduleClassByClassId(classId, centerId uuid.UUID) (models.ScheduleClass, error) {
+	var schedule models.ScheduleClass
+	query := app.Database.DB.Model(&models.ScheduleClass{})
+	query.Omit("created_at", "updated_at").Where("class_id = ? AND center_id = ? AND `type` IS NOT NULL", classId, centerId).First(&schedule)
+	return schedule, query.Error
+}
+
+func GetListScheduleByClassId(classId uuid.UUID, query consts.Query, user TokenData) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+	db := app.Database.DB.Model(&models.ScheduleClass{})
+	if query.StartAt != "" {
+		startAt, err := utils.ConvertStringToTime(query.StartAt)
+		if err != nil {
+			return schedules, err
+		}
+		db.Where("DATE(start_date) >= ?", startAt.Format("2006-01-02"))
+	}
+	if query.EndAt != "" {
+		endAt, err := utils.ConvertStringToTime(query.EndAt)
+		if err != nil {
+			return schedules, err
+		}
+		db.Where("DATE(start_date) <= ?", endAt.Format("2006-01-02"))
+	}
+	if user.RoleId != consts.Student && query.StudentId != "" {
+		db.Preload("Teacher", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "full_name")
+		})
+		db.Preload("Attendancers", func(db1 *gorm.DB) *gorm.DB {
+			db1 = db1.Where("student_id = ?", query.StudentId)
+			return db1.Preload("CreatedBy", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "full_name")
+			}).Select("class_id", "class_session_id", "student_id", "user_id")
+		})
+		db.Joins("INNER JOIN student_classes ON schedule_classes.`class_id` = student_classes.`class_id`").Where("student_classes.`student_id` = ?", query.StudentId)
+	}
+	db.Select("schedule_classes.`id`", "schedule_classes.`name`", "schedule_classes.`start_date`", "schedule_classes.`index`", "schedule_classes.`start_time`", "schedule_classes.`end_time`", "teacher_id", "schedule_classes.`work_session_id`").Where("schedule_classes.`class_id` = ? AND schedule_classes.`center_id` = ? AND `type` IS NULL", classId, user.CenterId).Order("schedule_classes.`start_date` ASC, schedule_classes.`start_time` ASC, schedule_classes.`index` ASC, schedule_classes.`created_at` ASC").Find(&schedules)
 	return schedules, db.Error
 }
