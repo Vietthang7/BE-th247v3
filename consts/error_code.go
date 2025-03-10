@@ -98,8 +98,13 @@ const (
 	//ERROR_LESSON_DATA_URL_DOCUMENT_INVALID                = 6064 // Đường dẫn tài liệu không hợp lệ
 	//ERROR_LESSON_DATA_TYPE_LESSON_DATA_NOT_FOUND          = 6065 // Kiểu bài giảng không hợp lệ
 	//ERROR_LESSON_DATA_POINT_TEST_INVALID                  = 6062 // Loại điểm không chính xác
-	//// schedule class
+
+	// schedule class
 	//ERROR_SCHEDULE_CLASS_LEARNED_CAN_NOT_DELETE = 6047 //Buổi học đã diễn ra. Không thể xóa
+	ERROR_SCHEDULE_CLASS_TEACHER_DUPLICATE_CALENDAR   = 6043 // Giảng viên có lịch bị trùng. Bạn vui lòng chọn giảng viên khác.
+	ERROR_TOTAL_LESSONS_NOT_EQUAL                     = 6038 // Số buổi học trong lịch không bằng số buổi môn
+	ERROR_SCHEDULE_CLASS_CLASSROOM_DUPLICATE_CALENDAR = 6045 // Phòng học có lịch bị trùng. Bạn vui lòng chọn phòng học khác.
+	ERROR_SCHEDULE_CLASS_ASISTANT_DUPLICATE_CALENDAR  = 6044 // Trợ giảng có lịch bị trùng. Bạn vui lòng chọn trợ giảng khác.
 
 	//class holiday
 	ERROR_CLASS_HOLIDAY_REQUIRED                              = 6220 // Tên ngày nghỉ bắt buộc nhập

@@ -119,3 +119,17 @@ func IsDateInRange(start1, start2, end2 time.Time) bool {
 	end2 = end2.Truncate(24 * time.Hour)     // chỉ giữ lại phần ngày
 	return !start1.Before(start2) && !start1.After(end2)
 }
+
+// IsTimeRangeOverlap kiểm tra xem hai khoảng thời gian có chồng lấn nhau không.
+// Các khoảng thời gian được xác định theo thời gian bắt đầu và kết thúc của chúng.
+func IsTimeRangeOverlap(start1, end1, start2, end2 time.Time) bool {
+	// Đảm bảo thời gian bắt đầu trước hoặc bằng thời gian kết thúc
+	if start1.After(end1) {
+		start1, end1 = end1, start1
+	}
+	if start2.After(end2) {
+		start2, end2 = end2, start2
+	}
+	// Check for overlap
+	return start1.Before(end2) && start2.Before(end1)
+}
