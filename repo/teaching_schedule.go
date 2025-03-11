@@ -17,7 +17,7 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 		return nil, fmt.Errorf("UserId is required")
 	}
 
-	// Lấy CenterId của User
+	// Lấy CenterId của Usera
 	var user struct {
 		CenterId uuid.UUID
 	}
