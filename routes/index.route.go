@@ -1,10 +1,11 @@
 package routes
 
 import (
+	mdw "intern_247/middleware"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	mdw "intern_247/middleware"
 )
 
 func AdminRoutes(app *fiber.App) {

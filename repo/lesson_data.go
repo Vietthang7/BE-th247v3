@@ -1,11 +1,12 @@
 package repo
 
 import (
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func GetLessonDataByNameAndClassId(name string, lessonDataId, classId, subjectId uuid.UUID) (models.LessonData, error) {

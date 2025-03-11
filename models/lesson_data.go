@@ -9,7 +9,7 @@ type LessonData struct {
 	Model       `gorm:"embedded"`
 	Name        string         `gorm:"size:250" json:"name"`
 	Type        int            `json:"type,omitempty"`
-	LessonId    uuid.UUID      `json:"-"`
+	LessonId    uuid.UUID      `json:"lesson_id,omitempty"`
 	Metadata    datatypes.JSON `json:"metadata,omitempty"`
 	Lesson      *Lesson        `gorm:"foreignKey:LessonId" json:"lesson,omitempty"`
 	Position    uint64         `json:"position,omitempty"`
