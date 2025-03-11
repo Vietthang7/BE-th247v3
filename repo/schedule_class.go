@@ -8,6 +8,7 @@ import (
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/utils"
+	"time"
 )
 
 // TeacherIsArranged Kiểm tra xem giáo viên có được sắp xếp dạy lớp nào không.
@@ -70,5 +71,41 @@ func GetListScheduleByClassId(classId uuid.UUID, query consts.Query, user TokenD
 		db.Joins("INNER JOIN student_classes ON schedule_classes.`class_id` = student_classes.`class_id`").Where("student_classes.`student_id` = ?", query.StudentId)
 	}
 	db.Select("schedule_classes.`id`", "schedule_classes.`name`", "schedule_classes.`start_date`", "schedule_classes.`index`", "schedule_classes.`start_time`", "schedule_classes.`end_time`", "teacher_id", "schedule_classes.`work_session_id`").Where("schedule_classes.`class_id` = ? AND schedule_classes.`center_id` = ? AND `type` IS NULL", classId, user.CenterId).Order("schedule_classes.`start_date` ASC, schedule_classes.`start_time` ASC, schedule_classes.`index` ASC, schedule_classes.`created_at` ASC").Find(&schedules)
+	return schedules, db.Error
+}
+
+func GetScheduleClassByTeacherIdAndLimitDate(classId, teacherId uuid.UUID, times []time.Time) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+	var dateStrings []string
+	// Vì sql không hỗ trợ  time.Time trực tiếp, ta cần chuyển times[] thành danh sách string có định dạng YYYY-MM-DD
+	for _, t := range times {
+		dateStrings = append(dateStrings, t.Format("2006-01-02"))
+	}
+	db := app.Database.DB.Order("schedule_classes.`start_date` ASC, schedule_classes.`start_time` ASC, schedule_classes.`index` ASC").Where("schedule_classes.`teacher_id` = ? AND DATE(schedule_classes.`start_date`) IN (?) AND schedule_classes.`class_id` != ?", teacherId, dateStrings, classId)
+	db.Joins("INNER JOIN classes ON classes.`id` = schedule_class.`class_id`").Where("classes.`status` != ? AND classes.`status` != ?", consts.CLASS_CANCELED, consts.CLASS_FINISHED)
+	db.Find(&schedules)
+	return schedules, db.Error
+}
+func GetScheduleClassByAsistantIdAndLimitDate(classId, asistantId uuid.UUID, times []time.Time) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+	var dateStrings []string
+	for _, t := range times {
+		dateStrings = append(dateStrings, t.Format("2006-01-02"))
+	}
+	db := app.Database.DB.Order("schedule_classes.`start_date` ASC, schedule_classes.`start_time` ASC, schedule_classes.`index` ASC").Where("schedule_classes.`asistant_id` = ? AND DATE(schedule_classes.`start_date`) IN (?) AND schedule_classes.`class_id` != ?", asistantId, dateStrings, classId)
+	db.Joins("INNER JOIN classes ON classes.`id` = schedule_class.`class_id`").Where("classes.`status` != ? AND classes.`status` != ?", consts.CLASS_CANCELED, consts.CLASS_FINISHED)
+	db.Find(&schedules)
+	return schedules, db.Error
+}
+func GetScheduleClassByClassroomIdAndLimitDate(classId, classroomId uuid.UUID, times []time.Time) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+	var dateStrings []string
+	for _, t := range times {
+		dateStrings = append(dateStrings, t.Format("2006-01-02"))
+	}
+	db := app.Database.DB.Model(&models.ScheduleClass{}).Order("schedule_classes.`start_date` ASC, schedule_classes.`start_time` ASC, schedule_classes.`index` ASC")
+	db.Joins("INNER JOIN schedule_classrooms ON schedule_classes.`id` = schedule_classrooms.`schedule_class_id`")
+	db.Joins("INNER JOIN classes ON classes.`id` = schedule_classes.`class_id`").Where("classes.`status` != ? AND classes.`status` != ?", consts.CLASS_CANCELED, consts.CLASS_FINISHED)
+	db.Where("DATE(schedule_classes.`start_date`) IN (?) AND schedule_classrooms.`classroom_id` = ? AND schedule_classes.`class_id` != ?", dateStrings, classroomId, classId).Find(&schedules)
 	return schedules, db.Error
 }
