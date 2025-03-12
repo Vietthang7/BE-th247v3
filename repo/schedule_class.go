@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
@@ -108,4 +109,51 @@ func GetScheduleClassByClassroomIdAndLimitDate(classId, classroomId uuid.UUID, t
 	db.Joins("INNER JOIN classes ON classes.`id` = schedule_classes.`class_id`").Where("classes.`status` != ? AND classes.`status` != ?", consts.CLASS_CANCELED, consts.CLASS_FINISHED)
 	db.Where("DATE(schedule_classes.`start_date`) IN (?) AND schedule_classrooms.`classroom_id` = ? AND schedule_classes.`class_id` != ?", dateStrings, classroomId, classId).Find(&schedules)
 	return schedules, db.Error
+}
+func CreateScheduleClass(scheduleClass *models.ScheduleClass, listIdChanged []uuid.UUID, isChangedType bool, centerId uuid.UUID, lessons []*models.Lesson, class models.Class) (*models.ScheduleClass, error) {
+	tx := app.Database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	if err := tx.Error; err != nil {
+		return nil, err
+	}
+	if len(listIdChanged) > 0 {
+		if err := tx.Select(clause.Associations).Where("class_id = ? AND is NOT IN ? AND center_id = ?", scheduleClass.ClassId, listIdChanged, centerId).Delete(&models.ScheduleClass{}).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		if err := tx.Exec("DELETE FROM schedule_classrooms WHERE schedule_class_id IN (SELECT id FROM schedule_classes WHERE id IN ? AND class_id = ? AND center_id = ?)", listIdChanged, scheduleClass.ClassId, centerId).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+	if isChangedType {
+		if err := tx.Where("class_id = ? AND center_id = ? AND `type` IS NULL", scheduleClass.ClassId, centerId).Delete(&models.ScheduleClass{}).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+	if err := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"name", "start_date", "start_time", "end_time", "type", "work_session_id", "teacher_id", "asistant_id", "metadata"}),
+	}).Session(&gorm.Session{FullSaveAssociations: true}).Create(&scheduleClass).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Model(&models.Lesson{}).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"schedule_id", "updated_at"}),
+	}).Select("ID", "ScheduleId", "UpdatedAt").Create(&lessons).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+
+	}
+	if err := tx.Model(&models.Class{}).Where("id = ?", class.ID).Update("end_at", class.EndAt).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return scheduleClass, tx.Commit().Error
 }

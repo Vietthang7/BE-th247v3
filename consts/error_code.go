@@ -105,6 +105,9 @@ const (
 	ERROR_TOTAL_LESSONS_NOT_EQUAL                     = 6038 // Số buổi học trong lịch không bằng số buổi môn
 	ERROR_SCHEDULE_CLASS_CLASSROOM_DUPLICATE_CALENDAR = 6045 // Phòng học có lịch bị trùng. Bạn vui lòng chọn phòng học khác.
 	ERROR_SCHEDULE_CLASS_ASISTANT_DUPLICATE_CALENDAR  = 6044 // Trợ giảng có lịch bị trùng. Bạn vui lòng chọn trợ giảng khác.
+	ERROR_SC_START_TIME_INVALID                       = 6036 // Thời gian bắt đầu không hợp lệ
+	ERROR_SCHEDULE_DATE_IS_BIGGER_THAN_START_AT       = 6041 // Ngày học không thể nhỏ hơn ngày khai giảng.
+	ERROR_SCHEDULE_CLASS_CONFLICT_HOLIDAY             = 6046 //Ngày học bạn chọn trùng với ngày nghỉ của trung tâm. Vui lòng chọn lại ngày học khác.
 
 	//class holiday
 	ERROR_CLASS_HOLIDAY_REQUIRED                              = 6220 // Tên ngày nghỉ bắt buộc nhập

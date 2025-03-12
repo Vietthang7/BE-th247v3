@@ -155,6 +155,6 @@ func DeleteClassroom(entry *models.Classroom) (err error) {
 }
 func GetClassroomsByIdsAndBranchCenterId(ids []uuid.UUID, branchId, centerId uuid.UUID) ([]models.Classroom, error) {
 	var classrooms []models.Classroom
-	db := app.Database.DB.Debug().Where("id IN ? AND branch_id = ? AND center_id = ?", ids, branchId, centerId).Find(&classrooms)
+	db := app.Database.DB.Where("id IN ? AND branch_id = ? AND center_id = ?", ids, branchId, centerId).Find(&classrooms)
 	return classrooms, db.Error
 }

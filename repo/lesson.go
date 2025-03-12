@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
@@ -112,4 +113,16 @@ func CountLessonData(query string, args []interface{}) (count int64) {
 	defer cancel()
 	app.Database.DB.WithContext(ctx).Model(&models.LessonData{}).Where(query, args...).Count(&count)
 	return
+}
+func FilterDetailLessonByLive(isLive bool, classId, centerId uuid.UUID) ([]models.Lesson, error) {
+	var lessons []models.Lesson
+	db := app.Database.DB.Where("class_id = ? AND center_id = ? AND parent_id IS NULL", classId, centerId)
+	db.Preload("Childrens", func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_live = ?", isLive).Order("position ASC, created_at ASC").Select("id", "name", "parent_id")
+	})
+	db.Order("position ASC, created_at ASC").Find(&lessons)
+	if db.Error != nil {
+		fmt.Println(db.Error.Error())
+	}
+	return lessons, db.Error
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"intern_247/consts"
 	"intern_247/models"
@@ -54,18 +55,18 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
 	}
 	var (
-		input            NewScheduleClassInput
-		scheduleClass    models.ScheduleClass
-		teacherIds       []uuid.UUID
-		asistantIds      []uuid.UUID
-		classroomIds     []uuid.UUID
-		workSessionIds   []uuid.UUID
-		totalLessonChild int // đếm tổng số buổi học con
-		//listScheduleIdChanged []uuid.UUID      // lưu trữ ID của các lịch học đã thay đổi hoặc cần được cập nhật trong quá trình xử lý
-		isChangeType bool // ùng để kiểm tra xem loại lịch học (Type) có thay đổi so với lịch học hiện tại hay không.
-		//listScheduleIdSync    []uuid.UUID      //Liên kết chính xác các bài học với lịch học mới sau khi tạo hoặc cập nhật.
-		//listLessonsSync       []*models.Lesson // Đảm bảo các bài học được gắn đúng với lịch học tương ứng.
-		scheduleIds []uuid.UUID // : Ngăn chặn thay đổi lịch học khi đã có thông tin điểm danh, đảm bảo tính toàn vẹn dữ liệu.
+		input                 NewScheduleClassInput
+		scheduleClass         models.ScheduleClass
+		teacherIds            []uuid.UUID
+		asistantIds           []uuid.UUID
+		classroomIds          []uuid.UUID
+		workSessionIds        []uuid.UUID
+		totalLessonChild      int              // đếm tổng số buổi học con
+		listScheduleIdChanged []uuid.UUID      // lưu trữ ID của các lịch học đã thay đổi hoặc cần được cập nhật trong quá trình xử lý
+		isChangeType          bool             // ùng để kiểm tra xem loại lịch học (Type) có thay đổi so với lịch học hiện tại hay không.
+		listScheduleIdSync    []uuid.UUID      //Liên kết chính xác các bài học với lịch học mới sau khi tạo hoặc cập nhật.
+		listLessonsSync       []*models.Lesson // Đảm bảo các bài học được gắn đúng với lịch học tương ứng.
+		scheduleIds           []uuid.UUID      // : Ngăn chặn thay đổi lịch học khi đã có thông tin điểm danh, đảm bảo tính toàn vẹn dữ liệu.
 	)
 	//Tạo các bản đồ (maps) để lưu trữ lịch bắt đầu và kết thúc của giáo viên, trợ giảng, và phòng học, cùng với danh sách thời gian kết thúc lịch để tính ngày kết thúc lớp.
 	teacherCalendarStart := make(map[uuid.UUID][]time.Time)
@@ -74,7 +75,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 	asistantCalendarEnd := make(map[uuid.UUID][]time.Time)
 	classRoomStart := make(map[uuid.UUID][]time.Time)
 	classRoomEnd := make(map[uuid.UUID][]time.Time)
-	//var scheduleTimes []time.Time // Lưu các thời gian kết thúc (EndTime) của các lịch để tìm ngày kết thúc lớn nhất của lớp (class.EndAt).
+	var scheduleTimes []time.Time // Lưu các thời gian kết thúc (EndTime) của các lịch để tìm ngày kết thúc lớn nhất của lớp (class.EndAt).
 	totalLessonChild = 0
 	if err := c.BodyParser(&input); err != nil {
 		logrus.Error(err)
@@ -87,7 +88,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 	class, err := repo.GetClassAndSubjectByIdAndCenterId(input.ClassId, user.CenterId)
 	if err != nil {
 		logrus.Error(err)
-		return ResponseError(c, fiber.StatusBadRequest, "Invalid 4a", consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Lớp học không hợp lệ", consts.InvalidReqInput)
 	}
 	if class.Status == consts.CLASS_CANCELED || class.Status == consts.CLASS_FINISHED {
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid serve", consts.InvalidReqInput)
@@ -195,7 +196,6 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 			isChangeType = true
 		}
 	}
-	fmt.Println(isChangeType)
 	// Xử lí lịch theo tuần
 	if input.Type == consts.SCHEDULE_CLASS_WEEK_TYPE {
 		Weeks := lo.Uniq(input.Weeks)
@@ -390,18 +390,171 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusBadRequest, "ws1", consts.InvalidReqInput)
 	}
 	//check time child record is valid
-	//for i := range input.ScheduleDetails {
-	//	for j := range workSessions {
-	//		if workSessions[j].ID == input.ScheduleDetails[i].WorkSessionId {
-	//			if time.Duration()
-	//		}
-	//	}
-	//}
-	return ResponseSuccess(c, fiber.StatusCreated, "Success", nil)
+	for i := range input.ScheduleDetails {
+		for j := range workSessions {
+			if workSessions[j].ID == input.ScheduleDetails[i].WorkSessionId {
+				if time.Duration(workSessions[j].StartTime.Hour()*3600+workSessions[j].StartTime.Minute()*60+workSessions[j].StartTime.Second())*time.Second > time.Duration(input.ScheduleDetails[i].StartTime) {
+					return ResponseError(c, fiber.StatusBadRequest, "lịch trình không thể bắt đầu trước phiên làm việc", consts.ERROR_SC_START_TIME_INVALID)
+				}
+			}
+		}
+		if input.ScheduleDetails[i].StartDate != nil && class.StartAt != nil && class.StartAt.After(*input.ScheduleDetails[i].StartDate) {
+			return ResponseError(c, fiber.StatusBadRequest, "Lịch trình không thể bắt đầu trước ngày khai giảng của lớp học.", consts.ERROR_SCHEDULE_DATE_IS_BIGGER_THAN_START_AT)
+		}
+		if input.Type == consts.SCHEDULE_CLASS_DAY_TYPE {
+			for idx := range holidays {
+				if input.ScheduleDetails[i].StartDate != nil {
+					if utils.IsDateInRange(*input.ScheduleDetails[i].StartDate, time.Time(holidays[idx].StartDay), time.Time(holidays[idx].EndDay)) {
+						return ResponseError(c, fiber.StatusBadRequest, utils.MixedDateAndTime(input.ScheduleDetails[i].StartDate, &input.ScheduleDetails[i].StartTime).Format("2006-01-02"), consts.ERROR_SCHEDULE_CLASS_CONFLICT_HOLIDAY)
+					}
+				}
+			}
+		}
+		for k := range input.ScheduleDetails[i].Childrens {
+			for j := range workSessions {
+				if workSessions[j].ID == input.ScheduleDetails[i].Childrens[k].WorkSessionId {
+					if time.Duration(workSessions[j].StartTime.Hour()*3600+workSessions[j].StartTime.Minute()*60+workSessions[j].StartTime.Second())*time.Second > time.Duration(input.ScheduleDetails[i].Childrens[k].StartTime) {
+						return ResponseError(c, fiber.StatusBadRequest, "lịch trình không thể bắt đầu trước phiên làm việc", consts.ERROR_SC_START_TIME_INVALID)
+					}
+					// if time.Duration(workSessions[j].EndTime.In(location).Hour()*3600+workSessions[j].EndTime.In(location).Minute()*60+workSessions[j].EndTime.In(location).Second())*time.Second < time.Duration(input.ScheduleDetails[i].Childrens[k].EndTime) {
+					// 	return ResponseError(c, fiber.StatusBadRequest, "Invalid 1", consts.ERROR_SC_END_TIME_INVALID)
+					// }
+				}
+			}
+		}
+	}
+	var calendar []byte
+	if input.Type == consts.SCHEDULE_CLASS_WEEK_TYPE {
+		calendar, err = json.Marshal(input.Weeks)
+		if err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusInternalServerError, "invalid calendar", consts.CreateFailed)
+		}
+	} else {
+		calendar, err = json.Marshal(input.Dates)
+		if err != nil {
+			logrus.Error(err)
+			return ResponseError(c, fiber.StatusInternalServerError, "invalid calendar date", consts.CreateFailed)
+		}
+	}
+	if scheduleClass.ID != uuid.Nil {
+		listScheduleIdChanged = append(listScheduleIdChanged, scheduleClass.ID)
+	} else {
+		scheduleClass.ID = uuid.New()
+		scheduleClass.CenterId = user.CenterId
+		scheduleClass.CreatedBy = user.ID
+		scheduleClass.ClassId = class.ID
+	}
+	scheduleClass.Type = input.Type
+	scheduleClass.Metadata = calendar
+	newScheduleParent := scheduleClass
+	scheduleIndex := 1
+	if len(input.ScheduleDetails) > 0 {
+		for i := range input.ScheduleDetails {
+			var childSchedules []models.ScheduleClass
+			var schedule models.ScheduleClass
+			schedule.ID = uuid.New()
+			if input.ScheduleDetails[i].Id != nil && !utils.Contains(listScheduleIdChanged, *input.ScheduleDetails[i].Id) {
+				schedule.ID = *input.ScheduleDetails[i].Id
+				listScheduleIdChanged = append(listScheduleIdChanged, schedule.ID)
+			}
+			if input.ScheduleDetails[i].StartDate == nil {
+				return ResponseError(c, fiber.StatusInternalServerError, "Time not null", consts.CreateFailed)
+			}
+			schedule.StartDate = input.ScheduleDetails[i].StartDate
+			schedule.StartTime = &input.ScheduleDetails[i].StartTime
+			schedule.EndTime = &input.ScheduleDetails[i].EndTime
+			scheduleTimes = append(scheduleTimes, *utils.MixedDateAndTime(input.ScheduleDetails[i].StartDate, &input.ScheduleDetails[i].EndTime))
+			for j := range input.ScheduleDetails[i].ClassroomIds {
+				for k := range classrooms {
+					if classrooms[k].ID == input.ScheduleDetails[i].ClassroomIds[j] {
+						schedule.Classrooms = append(schedule.Classrooms, classrooms[k])
+					}
+				}
+			}
+			schedule.TeacherId = &input.ScheduleDetails[i].TeacherId
+			schedule.AsistantId = input.ScheduleDetails[i].AsistantId
+			schedule.ParentId = &newScheduleParent.ID
+			schedule.ClassId = newScheduleParent.ClassId
+			schedule.CenterId = newScheduleParent.CenterId
+			schedule.CreatedBy = newScheduleParent.CreatedBy
+			schedule.WorkSessionId = &input.ScheduleDetails[i].WorkSessionId
+			schedule.Name = input.ScheduleDetails[i].Name
+			schedule.Index = scheduleIndex
+			newSchedule := schedule
+			// append id
+			scheduleIndex++
+			listScheduleIdSync = append(listScheduleIdSync, newSchedule.ID)
+			if len(input.ScheduleDetails[i].Childrens) > 0 {
+				for j := range input.ScheduleDetails[i].Childrens {
+					var childSchedule models.ScheduleClass
+					childSchedule.ID = uuid.New()
+					if input.ScheduleDetails[i].Childrens[j].Id != nil && !utils.Contains(listScheduleIdChanged, *input.ScheduleDetails[i].Childrens[j].Id) {
+						childSchedule.ID = *input.ScheduleDetails[i].Childrens[j].Id
+						listScheduleIdChanged = append(listScheduleIdChanged, childSchedule.ID)
+					}
+					listScheduleIdSync = append(listScheduleIdSync, childSchedule.ID)
+					childSchedule.StartTime = &input.ScheduleDetails[i].Childrens[j].StartTime
+					childSchedule.EndTime = &input.ScheduleDetails[i].Childrens[j].EndTime
+					for k := range input.ScheduleDetails[i].Childrens[j].ClassroomIds {
+						for h := range classrooms {
+							if classrooms[h].ID == input.ScheduleDetails[i].Childrens[j].ClassroomIds[k] {
+								childSchedule.Classrooms = append(childSchedule.Classrooms, classrooms[h])
+							}
+						}
+					}
+					childSchedule.TeacherId = &input.ScheduleDetails[i].Childrens[j].TeacherId
+					childSchedule.AsistantId = input.ScheduleDetails[i].Childrens[j].AsistantId
+					childSchedule.StartDate = schedule.StartDate
+					childSchedule.ParentId = &newSchedule.ID
+					childSchedule.ClassId = newSchedule.ClassId
+					childSchedule.CenterId = newSchedule.CenterId
+					childSchedule.CreatedBy = newSchedule.CreatedBy
+					childSchedule.WorkSessionId = &input.ScheduleDetails[i].Childrens[j].WorkSessionId
+					childSchedules = append(childSchedules, childSchedule)
+					scheduleIndex++
+					scheduleTimes = append(scheduleTimes, *utils.MixedDateAndTime(input.ScheduleDetails[i].StartDate, &input.ScheduleDetails[i].Childrens[j].EndTime))
+				}
+				newSchedule.Childrens = childSchedules
+			}
+			newSchedule.Childrens = append(newScheduleParent.Childrens, newSchedule)
+		}
+	}
+	if len(listScheduleIdChanged) > 0 {
+		schedulesOld, _ := repo.GetScheduleClassByIds(listScheduleIdChanged, user.CenterId)
+		if len(schedulesOld) != len(listScheduleIdChanged) {
+			return ResponseError(c, fiber.StatusBadRequest, "list record not found", consts.CreateFailed)
+		}
+	}
+	lessons, err := repo.FilterDetailLessonByLive(true, input.ClassId, user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.DataNotFound)
+	}
+	for i := range lessons {
+		listLessonsSync = append(listLessonsSync, lessons[i].Childrens...)
+	}
+	if len(listLessonsSync) != len(listScheduleIdSync) {
+		return ResponseError(c, fiber.StatusInternalServerError, "total invalid", consts.ERROR_TOTAL_LESSONS_NOT_EQUAL)
+	}
+	for i := range listLessonsSync {
+		listLessonsSync[i].ScheduleId = listScheduleIdSync[i]
+	}
+	//set end date class
+	maxDate := lo.MaxBy(scheduleTimes, func(a, b time.Time) bool {
+		return a.After(b)
+	})
+	class.EndAt = &maxDate
+	// create schedule class and update lesson in class
+	listSchedules, err := repo.CreateScheduleClass(&newScheduleParent, listScheduleIdChanged, isChangeType, user.CenterId, listLessonsSync, class)
+	if err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, "failed", consts.CreateFailed)
+	}
+	return ResponseSuccess(c, fiber.StatusCreated, "Success", listSchedules)
 }
 func handleGetDateNotInHoliday(Weeks []int, totalLessons int, startDate time.Time, holidays []models.Holiday) []time.Time {
 	var weekRules []rrule.Weekday
-	sort.Ints(Weeks) // Sắp xếp mảng Weeks tăng dần để đảm bảo thứ tự ngày hợp lý.
+	sort.Ints(Weeks) // Sắp xế	p mảng Weeks tăng dần để đảm bảo thứ tự ngày hợp lý.
 	for _, week := range Weeks {
 		var day rrule.Weekday
 		switch week {
