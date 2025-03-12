@@ -126,3 +126,8 @@ func FilterDetailLessonByLive(isLive bool, classId, centerId uuid.UUID) ([]model
 	}
 	return lessons, db.Error
 }
+func FilterLessonsByLive(isLive bool, classId, centerId uuid.UUID) ([]models.Lesson, error) {
+	var lessons []models.Lesson
+	db := app.Database.DB.Where("is_live = ? AND class_id ? AND center_id = ?", isLive, classId, centerId).Find(&lessons)
+	return lessons, db.Error
+}

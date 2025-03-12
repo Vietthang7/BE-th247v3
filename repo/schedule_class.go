@@ -157,3 +157,178 @@ func CreateScheduleClass(scheduleClass *models.ScheduleClass, listIdChanged []uu
 	}
 	return scheduleClass, tx.Commit().Error
 }
+func GetDetailScheduleByClassId(classId, centerId uuid.UUID) (models.ScheduleClass, error) {
+	var schedule models.ScheduleClass
+	query := app.Database.DB.Model(&models.ScheduleClass{})
+
+	query.Preload("Childrens", func(db1 *gorm.DB) *gorm.DB {
+		return db1.
+			Omit("created_at", "updated_at").
+			Order("start_date ASC, created_at ASC").
+			Preload("WorkSession", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "title")
+			}).
+			Preload("Classrooms", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "name")
+			}).
+			Preload("Asistant", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "full_name")
+			}).
+			Preload("Teacher", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "full_name")
+			}).
+			Preload("Childrens", func(db2 *gorm.DB) *gorm.DB {
+				return db2.
+					Omit("created_at", "updated_at").
+					Order("created_at ASC").
+					Preload("WorkSession", func(db *gorm.DB) *gorm.DB {
+						return db.Select("id", "title")
+					}).
+					Preload("Classrooms", func(db *gorm.DB) *gorm.DB {
+						return db.Select("id", "name")
+					}).
+					Preload("Asistant", func(db *gorm.DB) *gorm.DB {
+						return db.Select("id", "full_name")
+					}).
+					Preload("Teacher", func(db *gorm.DB) *gorm.DB {
+						return db.Select("id", "full_name")
+					}).
+					Preload("Attendancers", func(db *gorm.DB) *gorm.DB {
+						return db.Limit(1)
+					})
+			}).
+			Preload("Attendancers", func(db *gorm.DB) *gorm.DB {
+				return db.Limit(1)
+			})
+	})
+
+	query.Debug().
+		Omit("created_at", "updated_at").
+		Where("class_id = ? AND center_id = ? AND `type` IS NOT NULL", classId, centerId).
+		First(&schedule)
+
+	return schedule, query.Error
+}
+
+func GetScheduleClassForStudent(query consts.Query, user TokenData) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+
+	db := app.Database.Model(&models.ScheduleClass{}).
+		Select(
+			"schedule_classes.`id`", "schedule_classes.`name`",
+			"schedule_classes.`start_time`", "schedule_classes.`end_time`",
+			"schedule_classes.`class_id`", "schedule_classes.`teacher_id`",
+			"schedule_classes.`start_date`", "schedule_classes.`index`",
+		).
+		Where("schedule_classes.`center_id` = ? AND schedule_classes.`type` IS NULL", user.CenterId)
+
+	// Lọc theo lớp học
+	if query.Class != "" {
+		db.Where("class_id = ?", query.Class)
+	}
+
+	// Lọc theo ngày bắt đầu
+	if query.StartAt != "" {
+		startAt, err := utils.ConvertStringToTime(query.StartAt)
+		if err != nil {
+			return schedules, err
+		}
+		db.Where("DATE(schedule_classes.start_date) >= ?", startAt.Format("2006-01-02"))
+	}
+
+	// Lọc theo ngày kết thúc
+	if query.EndAt != "" {
+		endAt, err := utils.ConvertStringToTime(query.EndAt)
+		if err != nil {
+			return schedules, err
+		}
+		db.Where("DATE(schedule_classes.start_date) <= ?", endAt.Format("2006-01-02"))
+	}
+
+	db.Joins("INNER JOIN classes ON classes.id = schedule_classes.class_id")
+
+	// Lọc theo chi nhánh
+	if query.Branch != "" {
+		db.Where("classes.branch_id = ?", query.Branch)
+	}
+
+	// Lọc theo giáo viên
+	if query.Teacher != "" {
+		db.Where("schedule_classes.`teacher_id` = ?", query.Teacher)
+	}
+
+	// Tìm kiếm theo tên lớp
+	if query.Search != "" {
+		db.Where("classes.name LIKE ?", "%"+query.Search+"%")
+	}
+
+	// Lọc theo phòng học
+	if query.Classroom != "" {
+		db.Joins("INNER JOIN schedule_classrooms ON schedule_classrooms.schedule_class_id = schedule_classes.`id`").
+			Where("schedule_classrooms.classroom_id = ?", query.Classroom)
+	}
+
+	// Lọc theo môn học
+	if query.Subject != "" {
+		db.Joins("INNER JOIN subjects ON classes.subject_id = subjects.id").
+			Where("subjects.id = ?", query.Subject)
+	}
+
+	// Load danh sách học sinh tham gia lớp học
+	db.Preload("Attendancers", func(db *gorm.DB) *gorm.DB {
+		if user.RoleId == consts.Student {
+			db = db.Where("student_id = ?", user.ID)
+		}
+		return db.Select("class_id", "student_id", "class_session_id")
+	})
+
+	// Lọc theo học sinh
+	if query.StudentId != "" {
+		var student Student
+		if err := student.First("id = ?", []interface{}{query.StudentId}); err != nil {
+			return nil, err
+		}
+
+		if student.Type == consts.Trial {
+			db.Joins("JOIN student_sessions ss ON (ss.student_id = ? AND schedule_classes.id = ss.session_id)", user.ID)
+		} else {
+			db.Joins("INNER JOIN student_classes as sc ON sc.`class_id` = schedule_classes.`class_id`").
+				Where("sc.`student_id` = ? AND (sc.`status` != ? OR sc.`status` IS NULL)", query.StudentId, consts.Reserved)
+		}
+	}
+
+	// Kiểm tra quyền của người dùng HR
+	if user.RoleId == consts.CenterHR {
+		if user.Position == consts.Teacher || user.Position == consts.TeachingAssistant {
+			db.Where("schedule_classes.`teacher_id` = ? OR schedule_classes.`asistant_id` = ?", user.ID, user.ID)
+		}
+		if user.BranchId != nil {
+			db.Where("classes.`branch_id` = ?", user.BranchId)
+		}
+	}
+
+	// Loại bỏ các lớp bị hủy
+	db.Where("classes.`status` != ?", consts.CLASS_CANCELED)
+
+	// Load thông tin chi tiết của lớp học
+	db.Preload("Class", func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Subject", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "metadata")
+		}).Select("id", "name", "subject_id")
+	})
+
+	// Load thông tin giáo viên
+	db.Preload("Teacher", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id", "full_name")
+	})
+
+	// Load thông tin phòng học
+	db.Preload("Classrooms", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id", "name", "is_online", "room_type", "metadata")
+	})
+
+	// Debug SQL query và sắp xếp theo ngày bắt đầu
+	db.Debug().Order("schedule_classes.`start_date` ASC").Find(&schedules)
+
+	return schedules, db.Error
+}

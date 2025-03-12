@@ -8,6 +8,7 @@ import (
 	"intern_247/repo"
 	"intern_247/utils"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -630,4 +631,73 @@ func getNonHolidayDates(dates []time.Time, totalLessons int, holidays []models.H
 		return dates
 	}
 	return dates
+}
+func GetDetailScheduleClass(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+	}
+	isParam := c.Params("Id")
+	classId, err := uuid.Parse(isParam)
+	if err != nil {
+		return ResponseError(c, fiber.StatusForbidden, "Id class không hợp lệ", consts.InvalidReqInput)
+	}
+	//check lesson (table lesson) total equal than total lesson (class)
+	lessons, err := repo.FilterLessonsByLive(true, classId, *user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "not found lessons in class", consts.DataNotFound)
+	}
+	class, err := repo.GetClassByIdAndCenterId(classId, *user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "not found class", consts.DataNotFound)
+	}
+	lessonLen := len(lessons)
+	if lessonLen != int(class.TotalLessons) {
+		lessonMissNum := strconv.Itoa(int(class.TotalLessons) - len(lessons))
+		return ResponseError(c, fiber.StatusBadRequest, lessonMissNum, consts.ERROR_CAN_NOT_OPEN_WHEN_LESSON_TOTAL_NOT_EQUAL)
+	}
+	schedules, err := repo.GetDetailScheduleByClassId(classId, *user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "not found", consts.DataNotFound)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "Success", schedules)
+}
+func GetListScheduleClass(c *fiber.Ctx) error {
+	user, err := repo.GetTokenData(c)
+	if err != nil {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+	}
+	var query consts.Query
+	if err := c.QueryParser(&query); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "Invalid", consts.InvalidReqInput)
+	}
+	idParam := c.Params("id")
+	classId, err := uuid.Parse(idParam)
+	if err != nil {
+		return ResponseError(c, fiber.StatusForbidden, "Id require1", consts.InvalidReqInput)
+	}
+	schedules, err := repo.GetListScheduleByClassId(classId, query, user)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, err.Error(), consts.DataNotFound)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "Success", schedules)
+}
+
+func GetListScheduleClassForStudent(c *fiber.Ctx) error {
+	user, err := repo.GetTokenData(c)
+	if err != nil {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+	}
+	var query consts.Query
+	if err := c.QueryParser(&query); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "query không hợp lệ", consts.InvalidReqInput)
+	}
+	if user.RoleId == consts.Student {
+		query.StudentId = user.ID.String()
+	}
+	studentSchedule, err := repo.GetScheduleClassForStudent(query, user)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, err.Error(), consts.InvalidReqInput)
+	}
+	return ResponseSuccess(c, fiber.StatusOK, "Success", studentSchedule)
 }

@@ -100,7 +100,7 @@ const (
 	//ERROR_LESSON_DATA_POINT_TEST_INVALID                  = 6062 // Loại điểm không chính xác
 
 	// schedule class
-	//ERROR_SCHEDULE_CLASS_LEARNED_CAN_NOT_DELETE = 6047 //Buổi học đã diễn ra. Không thể xóa
+	ERROR_CAN_NOT_OPEN_WHEN_LESSON_TOTAL_NOT_EQUAL    = 6039 // Số buổi học trong nội dung bài giảng chưa đủ
 	ERROR_SCHEDULE_CLASS_TEACHER_DUPLICATE_CALENDAR   = 6043 // Giảng viên có lịch bị trùng. Bạn vui lòng chọn giảng viên khác.
 	ERROR_TOTAL_LESSONS_NOT_EQUAL                     = 6038 // Số buổi học trong lịch không bằng số buổi môn
 	ERROR_SCHEDULE_CLASS_CLASSROOM_DUPLICATE_CALENDAR = 6045 // Phòng học có lịch bị trùng. Bạn vui lòng chọn phòng học khác.
