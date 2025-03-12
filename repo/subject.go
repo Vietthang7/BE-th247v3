@@ -94,11 +94,9 @@ func GetListSubjectsByCenterId(q consts.Query, user TokenData) ([]models.Subject
 	db := app.Database.DB.Model(&models.Subject{}).Where("subjects.center_id = ?", user.CenterId).Select("subjects.id", "subjects.code", "subjects.name", "subjects.thumbnail", "subjects.fee_type", "subjects.category_id", "subjects.origin_fee", "subjects.discount_fee", "subjects.created_at", "subjects.updated_at", "subjects.is_active", "subjects.total_lessons", "(SELECT COUNT(classes.id) FROM classes WHERE subject_id = subjects.id AND classes.deleted_at IS NULL) AS class_total", "(SELECT COUNT(ss.`student_id`) FROM student_subjects as ss LEFT JOIN student_classes AS sc ON ss.student_id = sc.student_id JOIN students as s ON s.id = ss.student_id WHERE sc.student_id IS NULL AND ss.subject_id = subjects.id AND s.deleted_at IS NULL) as student_pendings")
 	db.Joins(`JOIN (SELECT code, name, MAX(updated_at) AS latest_updated_at FROM subjects WHERE center_id = ? AND deleted_at IS NULL GROUP BY code, name) AS latest_subjects ON (subjects.code = latest_subjects.code OR subjects.name = latest_subjects.name) AND subjects.updated_at = latest_subjects.latest_updated_at`, user.CenterId)
 	isActive = q.GetActive()
-	if q.Teacher == "true" {
-		db.Preload("Teachers", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id", "full_name")
-		})
-	}
+	db.Preload("Teachers", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id", "full_name", "center_id")
+	})
 	if isActive != nil {
 		db = db.Where("subjects.is_active = ?", *isActive)
 	}
@@ -118,7 +116,6 @@ func GetListSubjectsByCenterId(q consts.Query, user TokenData) ([]models.Subject
 			Where("student_subjects.student_id = ?", q.StudentId)
 	}
 	db.Count(&pagination.TotalResults)
-	// db.Joins("INNER JOIN `classes` ON classes.subject_id = `subjects`.id")
 	db.Order(fmt.Sprintf("%s %s, subjects.updated_at DESC", q.GetField(consts.SubjectField, "subjects.created_at"), q.GetSort())).Offset(q.GetOffset()).Limit(q.GetPageSize()).Find(&subjects)
 
 	pagination.CurrentPage = q.GetPage()

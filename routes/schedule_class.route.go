@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"intern_247/controllers"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func ScheduleClassRoute(scheduleclass fiber.Router) {
