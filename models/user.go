@@ -49,24 +49,25 @@ type User struct {
 }
 
 type DataUserReturn struct {
-	ID             uuid.UUID        `json:"id"`
-	FirstTimeLogin bool             `json:"first_time_login"`
-	RoleId         int64            `json:"role_id"`
-	PermissionGrp  *PermissionGroup `json:"permission_grp,omitempty"`
-	Position       int64            `json:"position,omitempty"`
-	FullName       string           `json:"full_name"`
-	Avatar         string           `json:"avatar"`
-	Email          string           `json:"email"`
-	Domain         string           `json:"domain,omitempty"`
-	Phone          string           `json:"phone"`
-	Gender         string           `json:"gender"`
-	Role           string           `json:"role"`
-	BranchID       *uuid.UUID       `json:"branch_id,omitempty"`
-	Token          string           `json:"token"`
-	//SSO_ID         *string          `json:"sso_id"`
-	GoogleId     string `json:"google_id"`
-	RefreshToken string `json:"refresh_token"`
+	ID              uuid.UUID        `json:"id"`
+	FirstTimeLogin  bool             `json:"first_time_login"`
+	RoleId          int64            `json:"role_id"`
+	PermissionGrpId *uuid.UUID       `json:"permission_grp_id"`
+	PermissionGrp   *PermissionGroup `json:"permission_grp,omitempty"`
+	Position        int64            `json:"position,omitempty"`
+	FullName        string           `json:"full_name"` // Thêm trường FullName
+	Avatar          string           `json:"avatar"`    // Thêm trường Avatar
+	Email           string           `json:"email"`
+	Domain          string           `json:"domain,omitempty"`
+	Phone           string           `json:"phone"`
+	Gender          string           `json:"gender"`
+	Role            string           `json:"role"`
+	BranchID        *uuid.UUID       `json:"branch_id,omitempty"`
+	Token           string           `json:"token"`
+	GoogleId        string           `json:"google_id"`
+	RefreshToken    string           `json:"refresh_token"`
 }
+
 type CreateUserForm struct {
 	ExcelInd        int64        `json:"excel_ind"` //STT trong file excel
 	Avatar          string       `json:"avatar"`
