@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"intern_247/app"
 	"intern_247/consts"
@@ -10,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -61,6 +63,17 @@ func CreateStudyNeeds(c *fiber.Ctx) error {
 
 		if err := repo.CheckWorkSessionIsActive(timeSlot.WorkSessionId); err != nil {
 			return ResponseError(c, fiber.StatusForbidden, consts.InvalidInput, err.Error())
+		}
+	}
+
+	if entry.Metadata == nil {
+		// Nếu Metadata là nil, gán giá trị mặc định là một đối tượng JSON rỗng
+		entry.Metadata = datatypes.JSON([]byte("{}"))
+	} else {
+		// Nếu Metadata đã có giá trị, kiểm tra xem nó có hợp lệ không
+		// Chuyển đổi dữ liệu Metadata thành JSON hợp lệ
+		if _, err := json.Marshal(entry.Metadata); err != nil {
+			return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, "Metadata không hợp lệ")
 		}
 	}
 
