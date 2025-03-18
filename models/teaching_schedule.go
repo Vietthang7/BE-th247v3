@@ -11,20 +11,20 @@ type TeachingSchedule struct {
 	Model     `gorm:"embedded"`
 	UserId    uuid.UUID `json:"user_id"`
 	CenterId  uuid.UUID `json:"center_id,omitempty"`
+	SubjectId uuid.UUID `json:"subject_id"` // Thêm SubjectId
 	IsOnline  *bool     `json:"is_online"`
 	IsOffline *bool     `json:"is_offline"`
 	Notes     string    `json:"notes"`
 
-	StartDate time.Time `json:"start_date"`
-	EndDate   time.Time `json:"end_date"`
-	//TimeSlots []TimeSlot  `json:"time_slots"`
-	TimeSlots datatypes.JSON `json:"time_slots" gorm:"-"`
-	//UserShifts []Shift    `json:"user_shifts"`
+	StartDate  time.Time      `json:"start_date"`
+	EndDate    time.Time      `json:"end_date"`
+	TimeSlots  datatypes.JSON `json:"time_slots" gorm:"-"`
 	UserShifts datatypes.JSON `json:"user_shifts" gorm:"-"`
 }
 
 type CreateTeachScheForm struct {
 	UserId     uuid.UUID      `json:"user_id"`
+	SubjectId  uuid.UUID      `json:"subject_id"` // Thêm SubjectId
 	IsOnline   *bool          `json:"is_online"`
 	IsOffline  *bool          `json:"is_offline"`
 	Notes      string         `json:"notes"`
