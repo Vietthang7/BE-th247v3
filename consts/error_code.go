@@ -61,6 +61,8 @@ const (
 	// Classroom - Phòng học
 	ClassroomExistence  = 2009 // Phòng học đã tồn tại
 	ClassroomIsArranged = 2010 // Đã có lớp học được gán. Không thể xóa
+	//lesson
+	ERROR_LESSON_IS_LIVE_MAXIMUM = 6090 //số buổi học vượt ngưỡng tối đa
 	// lesson data
 	ERROR_LESSON_DATA_TEST_NAME_CONTAIN_SPECIAL_CHARACTER = 6069 // Ô dữ liệu không hỗ trợ ký tự đặc biệt.
 	ERROR_LESSON_DATA_TEST_NAME_EXIST_IN_CLASS            = 6070 // Tên đề thi đã tồn tại. Vui lòng nhập tên khác

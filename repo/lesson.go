@@ -131,3 +131,20 @@ func FilterLessonsByLive(isLive bool, classId, centerId uuid.UUID) ([]models.Les
 	db := app.Database.DB.Where("is_live = ? AND class_id ? AND center_id = ?", isLive, classId, centerId).Find(&lessons)
 	return lessons, db.Error
 }
+func GetLessonsByClassIdAndCenterId(classId, centerId uuid.UUID) ([]models.Lesson, error) {
+	var lessons []models.Lesson
+	db := app.Database.DB.Where("class_id = ? AND center_id = ?", classId, centerId).Find(&lessons)
+	return lessons, db.Error
+}
+
+func GetLessonsTypeLiveBySubjectIdAndCenterId(subjectId, centerId uuid.UUID) ([]*models.Lesson, error) {
+	var lessons []*models.Lesson
+	db := app.Database.DB.Model(&models.Lesson{}).Where("center_id = ?", centerId).Omit("created_at", "updated_at")
+	db.Where("is_live = ? AND subject_id = ? AND class_id IS NULL", true, subjectId).Find(&lessons)
+	return lessons, db.Error
+}
+func GetLessonsTypeLiveByClassIdAndCenterId(classId, centerId uuid.UUID) ([]models.Lesson, error) {
+	var lessons []models.Lesson
+	db := app.Database.DB.Where("is_live = ? AND class_id = ? AND center_id = ?", true, classId, centerId).Find(&lessons)
+	return lessons, db.Error
+}
