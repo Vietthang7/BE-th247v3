@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -471,6 +472,11 @@ func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
 	return count
 }
 
+type StudentCanBeAddedIntoClass struct {
+	ID       uuid.UUID `json:"id"`
+	FullName string    `json:"full_name"`
+}
+
 //func ListStudentByEnrollmentPlan(classId uuid.UUID, centerId uuid.UUID, p *consts.RequestTable, query interface{}, args []interface{}) ([]*models.Student, error) {
 //	var (
 //		students    []*models.Student
@@ -530,47 +536,78 @@ func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, er
 	return class, db.Error
 }
 
-//func FindStudentsCanBeAddedIntoClass(class models.Class, search string) (entries []StudentCanBeAddedIntoClass, err error) {
-//	var (
-//		ctx, cancel                         = context.WithTimeout(context.Background(), app.CTimeOut)
-//		searchQuery, branchQuery, formQuery string
-//		args                                = []interface{}{class.StartAt, class.EndAt, class.Subject.Code, consts.Official, true, class.ID}
-//	)
-//	defer cancel()
-//	if search != "" {
-//		search = fmt.Sprintf("%%%s%%", search)
-//		searchQuery += "\n\tAND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)"
-//		args = append(args, search, search, search)
-//	}
-//	if class.BranchId != nil {
-//		branchQuery = "AND (sn.branch_id IS NULL OR sn.branch_id = '" + class.BranchId.String() + "')"
-//	}
-//	switch class.Type {
-//	case consts.CLASS_TYPE_OFFLINE:
-//		formQuery = "AND sn.is_offline_form = true"
-//	case consts.CLASS_TYPE_ONLINE:
-//		formQuery = "AND sn.is_online_form = true"
-//	case consts.CLASS_TYPE_HYBRID:
-//		formQuery = "AND (sn.is_offline_form = true OR sn.is_online_form = true)"
-//	}
-//	if err = app.Database.DB.WithContext(ctx).Raw(`--
-//	SELECT id ,full_name FROM students s
-//	JOIN (
-//		SELECT DISTINCT t1.student_id FROM (
-//			SELECT sc.student_id , cs.subject_id FROM student_curriculums sc
-//			JOIN curriculum_subjects cs ON cs.curriculum_id = sc.curriculum_id
-//			JOIN study_needs sn ON sn.id = sc.study_need_id
-//			`+branchQuery+`
-//			AND (sn.studying_start IS NULL OR sn.studying_start_date <= ?)
-//			`+formQuery+`
-//			UNION
-//			SELECT ss.student_id ,ss.subject_id FROM student_subjects ss
-//			JOIN study_needs sn ON sn.id = ss.study_need_id
-//		) t1
-//
-//	)
-//	`)
-//}
+func FindStudentsCanBeAddedIntoClass(class models.Class, search string) (entries []StudentCanBeAddedIntoClass, err error) {
+	var (
+		ctx, cancel                         = context.WithTimeout(context.Background(), app.CTimeOut)
+		searchQuery, branchQuery, formQuery string
+		args                                = []interface{}{class.StartAt, class.EndAt, class.Subject.Code, consts.Official, true, class.ID}
+	)
+	defer cancel()
+	if search != "" {
+		search = fmt.Sprintf("%%%s%%", search)
+		searchQuery += "\n\tAND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)"
+		args = append(args, search, search, search)
+	}
+	if class.BranchId != nil {
+		branchQuery = "AND (sn.branch_id IS NULL OR sn.branch_id = '" + class.BranchId.String() + "')"
+	}
+	switch class.Type {
+	case consts.CLASS_TYPE_OFFLINE:
+		formQuery = "AND sn.is_offline_form = true"
+	case consts.CLASS_TYPE_ONLINE:
+		formQuery = "AND sn.is_online_form = true"
+	case consts.CLASS_TYPE_HYBRID:
+		formQuery = "AND (sn.is_offline_form = true OR sn.is_online_form = true)"
+	}
+	if err = app.Database.DB.WithContext(ctx).Raw(`--
+		SELECT id , fullname FROM students s
+		JOIN (
+			SELECT DISTINCT t1.student_id FROM (
+				SELECT sc.student_id,cs.subject_id FROM student_curriculums sc
+				JOIN curriculums cs ON cs.curriculum_id = sc.curriculum_id
+				JOIN study_needs sn ON sn.id = sc.study_need_id
+				`+branchQuery+`
+				AND (sn.studying_start_date IS NULL OR sn.studying_start_date <= ?)
+				`+formQuery+`
+				UNION
+				SELECT ss.student_id , ss.subject_id FROM student_subjects ss
+				JOIN study_needs sn ON sn.id = ss.study_need_id
+				`+branchQuery+`
+				AND (sn.studying_start_date IS NULL OR sn.studying_start_date <= ?)
+				`+formQuery+`
+			) t1
+			JOIN subjects s ON s.id = t1.subject_id AND s.code = ?
+			) t2 ON t2.student_id = s.id
+			WHERE deleted_at IS NULL AND type = ? AND is_active = ? AND id NOT IN (SELECT student_id FROM student_classes WHERE class_id = ?)`+searchQuery+`ORDER BY created_at`, args...).Scan(&entries).Error; err != nil {
+		logrus.Error(err)
+		return nil, err
+	}
+	if CountScheduleClass("class_id = ? AND deleted_at IS NULL AND parent_id IS NOT NULL") == 0 {
+		return
+	}
+	var (
+		studentIds, hasSchedule []uuid.UUID
+		mark                    = make(map[uuid.UUID]StudentCanBeAddedIntoClass)
+	)
+	for _, student := range entries {
+		mark[student.ID] = student
+		studentIds = append(studentIds, student.ID)
+	}
+	// Lọc ra ID các học viên có đăng kí lịch trống
+	if err = app.Database.DB.WithContext(ctx).Raw("SELECT DISTINCT student_id FROM shifts WHERE deleted_at IS NULL AND student_id IN ?", studentIds).Scan(&hasSchedule).Error; err != nil {
+		logrus.Error(err)
+		return nil, err
+	}
+	// var theOthers, matchSchedules uuid.UUIDs
+	// // Lọc ra ID các học viên không đăng ký lịch trống
+	// if len(hasSchedule) < 1 {
+	// 	theOthers = studentIds
+	// } else {
+	// 	theOthers = utils.FindTheOtherElems(studentIds, hasSchedule)
+	// }
+	return entries, nil
+
+}
 
 // DeleteClass xóa lớp học theo ID
 func DeleteClass(classId uuid.UUID) error {

@@ -114,7 +114,7 @@ func CreateClass(c *fiber.Ctx) error {
 	class.GroupUrl = input.GroupUrl
 	class.CreatedBy = user.ID
 	//class.PlanId = input.PlanId
-	class.BranchId = input.BranchId
+	class.BranchId = &input.BranchId
 	class.SubjectId = input.SubjectId
 	//class.CurriculumId = input.CurriculumId
 	class.StartAt = &input.StartAt
@@ -226,7 +226,7 @@ func UpdateClass(c *fiber.Ctx) error {
 	}
 	class.Code = input.Code
 	class.Name = input.Name
-	class.BranchId = input.BranchId
+	class.BranchId = &input.BranchId
 	class.SubjectId = input.SubjectId
 	class.StartAt = &input.StartAt
 	class.EndAt = input.EndAt
