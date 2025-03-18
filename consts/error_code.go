@@ -81,6 +81,7 @@ const (
 	ERROR_WORK_SESSION_NAME_EXIST        = 6048 // Tên ca làm đã tồn tại
 	ERROR_WORK_SESSION_HAVE_DATA_DEPENDS = 6049 // Ca làm đã có dữ liệu thuộc. Không thể cập nhật
 	// class
+	ERROR_CLASS_NOT_FOUND                          = 6012 // Không tìm thấy lớp học
 	ERROR_CLASS_NAME_REQUIRED                      = 6013 // Tên lớp học là bắt buộc
 	ERROR_CLASS_CODE_MIN_SIZE_6                    = 6014 // Mã lớp học tối thiểu 6 kí tự
 	ERROR_CLASS_CODE_MAX_SIZE_20                   = 6015 // Mã lớp học tối đa 20 kí tự
@@ -89,6 +90,7 @@ const (
 	ERROR_CLASS_CAN_NOT_UPDATE_INPROGRESS          = 6024 // Không thể cập nhật lớp học đã diễn ra
 	ERROR_START_DAY_MUST_SMALLER_THAN_END_DAY      = 6098 // Ngày bắt đầu phải nhỏ hơn ngày kết thúc
 	ERROR_SCHEDULE_CLASS_ATTENDANCED               = 6042 // Lớp học đã điểm danh, không thể xếp lịch
+	ERROR_CLASS_CANCELED_OR_FINISHED_NOT_CANCEL    = 6025 // Không thể cập nhật lớp học đã hủy hoặc đã kết thúc
 	//// lesson data
 	//ERROR_LESSON_DATA_TEST_NAME_CONTAIN_SPECIAL_CHARACTER = 6069 // Ô dữ liệu không hỗ trợ ký tự đặc biệt.
 	//ERROR_LESSON_DATA_TEST_NAME_EXIST_IN_CLASS            = 6070 // Tên đề thi đã tồn tại. Vui lòng nhập tên khác

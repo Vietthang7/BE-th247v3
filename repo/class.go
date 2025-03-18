@@ -471,10 +471,54 @@ func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
 	return count
 }
 
-type StudentCanBeAddedIntoClass struct {
-	ID       uuid.UUID `json:"id"`
-	FullName string    `json:"full_name"`
-}
+//func ListStudentByEnrollmentPlan(classId uuid.UUID, centerId uuid.UUID, p *consts.RequestTable, query interface{}, args []interface{}) ([]*models.Student, error) {
+//	var (
+//		students    []*models.Student
+//		class       *models.Class
+//		err         error
+//		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+//	)
+//	defer cancel()
+//	err = app.Database.DB.WithContext(ctx).Where("id = ? AND center_id = ?", classId, centerId).
+//		Preload("Subject").Preload("Branch").First(&class).Error
+//	if err != nil {
+//		return nil, err
+//	}
+//	// TODO: Xử lý lọc danh sách kế hoạch tuyển sinh của lớp học
+//	db := app.Database.DB.WithContext(ctx).Model(&models.Student{}).Where("students.type = ?", consts.Official).
+//		Preload("Subjects")
+//	db = db.Joins("JOIN study_needs ON study_needs.student_id = students.id").Where(query, args...).
+//		Where("study_needs.studying_start_date <= ? OR study_needs.studying_start_date IS NULL", class.StartAt).
+//		Where("(students.id) NOT IN (SELECT student_id FROM student_classes WHERE class_id = ?)", classId) //Loại bỏ học viên đã đăng ký lớp này (student_classes).
+//	if class.BranchId != uuid.Nil {
+//		db = db.Where("study_needs.branch_id = ?", class.BranchId)
+//	}
+//	switch class.Type {
+//	case 1: // Online
+//		db = db.Where("study_needs.is_online_form = ?", true)
+//	case 2: //Offline
+//		db = db.Where("study_needs.is_offline_form = ?", true)
+//	case 3: //Hybrid
+//		db = db.Where("study_needs.is_online_form = ? OR study_needs.is_offline_form = ?", true, true)
+//	}
+//	err = db.Find(&students).Error
+//	if err != nil {
+//		return nil, err
+//	}
+//	// lọc học viên dựa trên môn học
+//	var (
+//		mark                    = make(map[uuid.UUID]*models.Student)
+//		studentIds, hasSchedule []uuid.UUID
+//	)
+//	for _, student := range students {
+//		_, uniqueSubjectIds, _ := CountUnclassifiedsubjects(student.ID)
+//		if utils.Contains(uniqueSubjectIds, class.SubjectId) {
+//			mark[student.ID] = student
+//			studentIds = append(studentIds, student.ID)
+//		}
+//	}
+//
+//}
 
 func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, error) {
 	var class models.Class
@@ -527,3 +571,30 @@ func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, er
 //	)
 //	`)
 //}
+
+// DeleteClass xóa lớp học theo ID
+func DeleteClass(classId uuid.UUID) error {
+	db := app.Database.DB
+
+	// Tìm lớp học trước
+	var class models.Class
+	if err := db.First(&class, "id = ?", classId).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return err // Không tìm thấy lớp học
+		}
+		return err // Lỗi khác từ cơ sở dữ liệu
+	}
+
+	// Xóa lớp học
+	if err := db.Delete(&class).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Cập nhật trạng thái của lớp học
+func UpdateClassStatus(class *models.Class) error {
+	// Cập nhật trạng thái lớp học trong cơ sở dữ liệu
+	return app.Database.DB.Save(class).Error
+}

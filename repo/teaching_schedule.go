@@ -94,7 +94,7 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 	}
 
 	// Parse danh sách UserShifts
-	var rawUserShifts []models.Shift
+	var rawUserShifts []models.ShortShift
 	if err := json.Unmarshal(form.UserShifts, &rawUserShifts); err != nil {
 		return nil, fmt.Errorf("%s", "Invalid user_shifts format")
 	}
@@ -116,26 +116,28 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 
 		// Lặp qua ngày từ StartDate đến EndDate
 		for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
-			if convertWeekday(d.Weekday()) == rawShift.DayOfWeek {
-				// Tìm TimeSlotId phù hợp
-				var timeSlotId uuid.UUID
-				for _, ts := range timeSlots {
-					if ts.WorkSessionId == rawShift.WorkSessionId {
-						timeSlotId = ts.ID
-						break
+			for _, day := range rawShift.DayOfWeek {
+				if convertWeekday(d.Weekday()) == day {
+					// Tìm TimeSlotId phù hợp
+					var timeSlotId uuid.UUID
+					for _, ts := range timeSlots {
+						if ts.WorkSessionId == rawShift.WorkSessionId {
+							timeSlotId = ts.ID
+							break
+						}
 					}
-				}
 
-				userShifts = append(userShifts, models.Shift{
-					ScheduleId:    newSchedule.ID,
-					UserId:        &form.UserId,
-					CenterId:      user.CenterId,
-					WorkSessionId: rawShift.WorkSessionId,
-					DayOfWeek:     rawShift.DayOfWeek,
-					Date:          d,
-					Type:          "user",
-					TimeSlotId:    timeSlotId,
-				})
+					userShifts = append(userShifts, models.Shift{
+						ScheduleId:    newSchedule.ID,
+						UserId:        &form.UserId,
+						CenterId:      user.CenterId,
+						WorkSessionId: rawShift.WorkSessionId,
+						DayOfWeek:     day,
+						Date:          d,
+						Type:          "user",
+						TimeSlotId:    timeSlotId,
+					})
+				}
 			}
 		}
 	}
@@ -328,7 +330,7 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 	}
 
 	// Parse danh sách UserShifts
-	var rawUserShifts []models.Shift
+	var rawUserShifts []models.ShortShift
 	if err := json.Unmarshal(form.UserShifts, &rawUserShifts); err != nil {
 		return nil, fmt.Errorf("%s", "Invalid user_shifts format")
 	}
@@ -353,26 +355,28 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 
 		// Lặp qua các ngày trong khoảng StartDate - EndDate
 		for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
-			if convertWeekday(d.Weekday()) == rawShift.DayOfWeek {
-				// Tìm TimeSlotId phù hợp với WorkSessionId của lịch giảng dạy
-				var timeSlotId uuid.UUID
-				for _, ts := range timeSlots {
-					if ts.WorkSessionId == rawShift.WorkSessionId {
-						timeSlotId = ts.ID
-						break
+			for _, day := range rawShift.DayOfWeek {
+				if convertWeekday(d.Weekday()) == day {
+					// Tìm TimeSlotId phù hợp với WorkSessionId của lịch giảng dạy
+					var timeSlotId uuid.UUID
+					for _, ts := range timeSlots {
+						if ts.WorkSessionId == rawShift.WorkSessionId {
+							timeSlotId = ts.ID
+							break
+						}
 					}
-				}
 
-				userShifts = append(userShifts, models.Shift{
-					ScheduleId:    schedule.ID,
-					UserId:        &form.UserId,
-					WorkSessionId: rawShift.WorkSessionId,
-					DayOfWeek:     rawShift.DayOfWeek,
-					Date:          d,
-					Type:          "user",
-					TimeSlotId:    timeSlotId,
-					CenterId:      user.CenterId,
-				})
+					userShifts = append(userShifts, models.Shift{
+						ScheduleId:    schedule.ID,
+						UserId:        &form.UserId,
+						WorkSessionId: rawShift.WorkSessionId,
+						DayOfWeek:     day,
+						Date:          d,
+						Type:          "user",
+						TimeSlotId:    timeSlotId,
+						CenterId:      user.CenterId,
+					})
+				}
 			}
 		}
 	}
