@@ -529,3 +529,30 @@ func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, er
 	db.First(&class)
 	return class, db.Error
 }
+
+// DeleteClass xóa lớp học theo ID
+func DeleteClass(classId uuid.UUID) error {
+	db := app.Database.DB
+
+	// Tìm lớp học trước
+	var class models.Class
+	if err := db.First(&class, "id = ?", classId).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return err // Không tìm thấy lớp học
+		}
+		return err // Lỗi khác từ cơ sở dữ liệu
+	}
+
+	// Xóa lớp học
+	if err := db.Delete(&class).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Cập nhật trạng thái của lớp học
+func UpdateClassStatus(class *models.Class) error {
+	// Cập nhật trạng thái lớp học trong cơ sở dữ liệu
+	return app.Database.DB.Save(class).Error
+}

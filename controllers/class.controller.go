@@ -86,7 +86,7 @@ func CreateClass(c *fiber.Ctx) error {
 	if err == nil {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.ERROR_CLASS_CODE_DUPLICATED)
 	}
-	if input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_HYBRID {
+	if input.Type != consts.CLASS_TYPE_ONLINE && input.Type != consts.CLASS_TYPE_OFFLINE && input.Type != consts.CLASS_TYPE_HYBRID {
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid", consts.ERROR_TYPE_NOT_FOUND)
 	}
 	//TODO - CHECK PLAN apply
@@ -276,4 +276,75 @@ func GetListClasses(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusInternalServerError, "Error Permission denied", err.Error())
 	}
 	return ResponseSuccess(c, fiber.StatusOK, "Success", fiber.Map{"classes": classes, "pagination": pagination, "subjects": Subjectids, "overview": overview})
+}
+
+func DeleteClass(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Lỗi quyền truy cập", consts.ERROR_PERMISSION_DENIED)
+	}
+
+	classId := c.Params("id") // Lấy ID lớp học từ tham số URL
+
+	// Chuyển đổi ID lớp học từ tham số URL thành UUID
+	classUUID, err := uuid.Parse(classId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "ID lớp học không hợp lệ", consts.ERROR_INVALID_CLASS_ID)
+	}
+
+	// Kiểm tra xem lớp học có tồn tại và thuộc trung tâm hiện tại không
+	_, err = repo.GetClassByIdAndCenterId(classUUID, *user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusNotFound, "Lớp học không tìm thấy", consts.ERROR_CLASS_NOT_FOUND)
+	}
+
+	// Thực hiện xóa lớp học mà không kiểm tra trạng thái IsActive
+	err = repo.DeleteClass(classUUID)
+	if err != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, "Lỗi khi xóa lớp học", consts.ERROR_INTERNAL_SERVER_ERROR)
+	}
+
+	// Trả về phản hồi thành công
+	return ResponseSuccess(c, fiber.StatusOK, "Xóa lớp học thành công", nil)
+}
+
+func CanceledClass(c *fiber.Ctx) error {
+	// Lấy thông tin người dùng từ context
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Lỗi quyền truy cập", consts.ERROR_PERMISSION_DENIED)
+	}
+
+	// Lấy ID lớp học từ tham số URL
+	classId := c.Params("id")
+	classUUID, err := uuid.Parse(classId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "ID lớp học không hợp lệ", consts.ERROR_CLASS_NOT_FOUND)
+	}
+
+	// Lấy centerId từ thông tin người dùng (giả sử rằng người dùng có quyền trên một center nhất định)
+	centerId := *user.CenterId // Giả sử user.CenterId là kiểu uuid.UUID và có giá trị
+
+	// Tìm lớp học theo classId và centerId sử dụng hàm GetClassByIdAndCenterId
+	class, err := repo.GetClassByIdAndCenterId(classUUID, centerId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusNotFound, "Lớp học không tìm thấy hoặc không thuộc trung tâm này", consts.ERROR_CLASS_NOT_FOUND)
+	}
+
+	// Kiểm tra xem lớp học đã bị hủy chưa
+	if class.Status == consts.CLASS_CANCELED {
+		return ResponseError(c, fiber.StatusBadRequest, "Lớp học đã bị hủy rồi", consts.ERROR_CLASS_CANCELED_OR_FINISHED_NOT_CANCEL)
+	}
+
+	// Cập nhật trạng thái lớp học thành CLASS_CANCELED
+	class.Status = consts.CLASS_CANCELED
+
+	// Cập nhật lớp học trong cơ sở dữ liệu
+	err = repo.UpdateClassStatus(&class)
+	if err != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, "Lỗi khi cập nhật trạng thái lớp học", consts.ERROR_INTERNAL_SERVER_ERROR)
+	}
+
+	// Trả về phản hồi thành công
+	return ResponseSuccess(c, fiber.StatusOK, "Lớp học đã được hủy thành công", class)
 }
