@@ -471,54 +471,10 @@ func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
 	return count
 }
 
-//func ListStudentByEnrollmentPlan(classId uuid.UUID, centerId uuid.UUID, p *consts.RequestTable, query interface{}, args []interface{}) ([]*models.Student, error) {
-//	var (
-//		students    []*models.Student
-//		class       *models.Class
-//		err         error
-//		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
-//	)
-//	defer cancel()
-//	err = app.Database.DB.WithContext(ctx).Where("id = ? AND center_id = ?", classId, centerId).
-//		Preload("Subject").Preload("Branch").First(&class).Error
-//	if err != nil {
-//		return nil, err
-//	}
-//	// TODO: Xử lý lọc danh sách kế hoạch tuyển sinh của lớp học
-//	db := app.Database.DB.WithContext(ctx).Model(&models.Student{}).Where("students.type = ?", consts.Official).
-//		Preload("Subjects")
-//	db = db.Joins("JOIN study_needs ON study_needs.student_id = students.id").Where(query, args...).
-//		Where("study_needs.studying_start_date <= ? OR study_needs.studying_start_date IS NULL", class.StartAt).
-//		Where("(students.id) NOT IN (SELECT student_id FROM student_classes WHERE class_id = ?)", classId) //Loại bỏ học viên đã đăng ký lớp này (student_classes).
-//	if class.BranchId != uuid.Nil {
-//		db = db.Where("study_needs.branch_id = ?", class.BranchId)
-//	}
-//	switch class.Type {
-//	case 1: // Online
-//		db = db.Where("study_needs.is_online_form = ?", true)
-//	case 2: //Offline
-//		db = db.Where("study_needs.is_offline_form = ?", true)
-//	case 3: //Hybrid
-//		db = db.Where("study_needs.is_online_form = ? OR study_needs.is_offline_form = ?", true, true)
-//	}
-//	err = db.Find(&students).Error
-//	if err != nil {
-//		return nil, err
-//	}
-//	// lọc học viên dựa trên môn học
-//	var (
-//		mark                    = make(map[uuid.UUID]*models.Student)
-//		studentIds, hasSchedule []uuid.UUID
-//	)
-//	for _, student := range students {
-//		_, uniqueSubjectIds, _ := CountUnclassifiedsubjects(student.ID)
-//		if utils.Contains(uniqueSubjectIds, class.SubjectId) {
-//			mark[student.ID] = student
-//			studentIds = append(studentIds, student.ID)
-//		}
-//	}
-//
-//}
+type StudentCanBeAddedIntoClass struct {
+	ID       uuid.UUID `json:"id"`
+	FullName string    `json:"full_name"`
+}
 
 func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, error) {
 	var class models.Class
@@ -529,3 +485,45 @@ func GetClassAndSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Class, er
 	db.First(&class)
 	return class, db.Error
 }
+
+//func FindStudentsCanBeAddedIntoClass(class models.Class, search string) (entries []StudentCanBeAddedIntoClass, err error) {
+//	var (
+//		ctx, cancel                         = context.WithTimeout(context.Background(), app.CTimeOut)
+//		searchQuery, branchQuery, formQuery string
+//		args                                = []interface{}{class.StartAt, class.EndAt, class.Subject.Code, consts.Official, true, class.ID}
+//	)
+//	defer cancel()
+//	if search != "" {
+//		search = fmt.Sprintf("%%%s%%", search)
+//		searchQuery += "\n\tAND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)"
+//		args = append(args, search, search, search)
+//	}
+//	if class.BranchId != nil {
+//		branchQuery = "AND (sn.branch_id IS NULL OR sn.branch_id = '" + class.BranchId.String() + "')"
+//	}
+//	switch class.Type {
+//	case consts.CLASS_TYPE_OFFLINE:
+//		formQuery = "AND sn.is_offline_form = true"
+//	case consts.CLASS_TYPE_ONLINE:
+//		formQuery = "AND sn.is_online_form = true"
+//	case consts.CLASS_TYPE_HYBRID:
+//		formQuery = "AND (sn.is_offline_form = true OR sn.is_online_form = true)"
+//	}
+//	if err = app.Database.DB.WithContext(ctx).Raw(`--
+//	SELECT id ,full_name FROM students s
+//	JOIN (
+//		SELECT DISTINCT t1.student_id FROM (
+//			SELECT sc.student_id , cs.subject_id FROM student_curriculums sc
+//			JOIN curriculum_subjects cs ON cs.curriculum_id = sc.curriculum_id
+//			JOIN study_needs sn ON sn.id = sc.study_need_id
+//			`+branchQuery+`
+//			AND (sn.studying_start IS NULL OR sn.studying_start_date <= ?)
+//			`+formQuery+`
+//			UNION
+//			SELECT ss.student_id ,ss.subject_id FROM student_subjects ss
+//			JOIN study_needs sn ON sn.id = ss.study_need_id
+//		) t1
+//
+//	)
+//	`)
+//}

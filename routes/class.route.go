@@ -12,4 +12,5 @@ func ClassRoute(class fiber.Router) {
 	class.Patch("/class", mdw.Gate("class", "update"), controllers.UpdateClass)
 	class.Get("/classes", mdw.Gate("class", "list"), controllers.GetListClasses)
 	//class.Get("/class/:id/student_enroll", mdw.Gate("class", "list"), controllers.ListStudentByEnrollmentPlan)
+	//class.Get("/class/:id/student_enroll", mdw.Gate("class", "list"), controllers.ListStudentByEnrollmentPlan)
 }

@@ -16,7 +16,7 @@ type Class struct {
 	EndAt        *time.Time `gorm:"index" json:"end_at,omitempty"`
 	Type         int        `gorm:"index" json:"type,omitempty"`
 	Description  string     `gorm:"type:text" json:"description,omitempty"` //number and character
-	BranchId     uuid.UUID  `json:"-"`
+	BranchId     *uuid.UUID `json:"-"`
 	ClassroomId  uuid.UUID  `json:"-"`
 	Classroom    *Classroom `gorm:"foreignKey:ClassroomId" json:"classroom,omitempty"`
 	PlanId       uuid.UUID  `gorm:"default:null" json:"plan_id"` //ke hoach tuyen sinh
