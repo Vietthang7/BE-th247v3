@@ -91,7 +91,9 @@ func GetDetailClassByIdAndCenterId(id, centerId uuid.UUID, token TokenData, isCh
 		return db.Select("id", "name")
 	})
 	db.Preload("Subject", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id", "name")
+		return db.Select("id", "name").Preload("Teachers", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "full_name")
+		})
 	})
 	db.Preload("Creater", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id", "full_name")

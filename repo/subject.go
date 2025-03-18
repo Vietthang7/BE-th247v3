@@ -37,9 +37,10 @@ func GetSubjectByNameAndIdAndCenterId(name string, id uuid.UUID, centerId uuid.U
 }
 func GetSubjectByIdAndCenterId(id, centerId uuid.UUID) (models.Subject, error) {
 	var subject models.Subject
-	db := app.Database.DB.Select("id", "name").Where("id = ? AND center_id = ?", id, centerId).First(&subject)
+	db := app.Database.DB.Select("id", "name", "total_lessons").Where("id = ? AND center_id = ?", id, centerId).First(&subject)
 	return subject, db.Error
 }
+
 func UpdateSubject(subject *models.Subject) (*models.Subject, error) {
 	tx := app.Database.DB.Begin()
 	defer func() {

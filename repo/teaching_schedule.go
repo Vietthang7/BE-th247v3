@@ -17,6 +17,20 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 		return nil, fmt.Errorf("UserId is required")
 	}
 
+	if form.SubjectId == uuid.Nil {
+		return nil, fmt.Errorf("SubjectId is required")
+	}
+
+	// Kiểm tra SubjectId có tồn tại không
+	var subjectExists bool
+	if err := app.Database.DB.
+		Model(&models.Subject{}).
+		Select("count(*) > 0").
+		Where("id = ?", form.SubjectId).
+		Find(&subjectExists).Error; err != nil || !subjectExists {
+		return nil, fmt.Errorf("%s", "ID không hợp lệ hoặc không tồn tại")
+	}
+
 	// Lấy CenterId của User
 	var user struct {
 		CenterId uuid.UUID
@@ -40,6 +54,7 @@ func CreateTeachingSchedule(form models.CreateTeachScheForm) (*models.TeachingSc
 	newSchedule := models.TeachingSchedule{
 		UserId:     form.UserId,
 		CenterId:   user.CenterId,
+		SubjectId:  form.SubjectId, // Thêm SubjectId
 		StartDate:  startDate,
 		EndDate:    endDate,
 		IsOnline:   form.IsOnline,
@@ -271,6 +286,7 @@ func UpdateTeachSchedule(scheduleID uuid.UUID, form models.CreateTeachScheForm) 
 	// Cập nhật thông tin lịch giảng dạy
 	schedule.UserId = form.UserId
 	schedule.CenterId = user.CenterId
+	schedule.SubjectId = form.SubjectId
 	schedule.StartDate = startDate
 	schedule.EndDate = endDate
 	schedule.IsOnline = form.IsOnline
