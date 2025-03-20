@@ -321,23 +321,23 @@ func GetListClassesByQueryAndCenterId(q consts.Query, centerId uuid.UUID, token 
 		}
 		db.Joins("JOIN subjects s1 ON s1.id = classes.subject_id")
 		db.Where(`
-				EXISTS (
-				SELECT 1 
-				FROM student_subjects ss 
-				JOIN subjects s3 ON s3.id = ss.subject_id
-				WHERE ss.student_id = ?
-				AND s1.code = s3.code
-				)`, student.ID)
+                EXISTS (
+                SELECT 1 
+                FROM student_subjects ss 
+                JOIN subjects s3 ON s3.id = ss.subject_id
+                WHERE ss.student_id = ?
+                AND s1.code = s3.code
+                )`, student.ID)
 		db.Where(`
-				NOT EXISTS (
-				SELECT 1 
-				FROM student_classes sc
-				JOIN classes c ON c.id = sc.class_id
-				JOIN subjects s2 ON s2.id = c.subject_id
-				WHERE sc.student_id = ?
-				AND s1.code = s2.code
-				)
-				`, student.ID)
+                NOT EXISTS (
+                SELECT 1 
+                FROM student_classes sc
+                JOIN classes c ON c.id = sc.class_id
+                JOIN subjects s2 ON s2.id = c.subject_id
+                WHERE sc.student_id = ?
+                AND s1.code = s2.code
+                )
+                `, student.ID)
 		db.Preload("ScheduleClass", func(db *gorm.DB) *gorm.DB {
 			if q.ScheduleLength > 0 {
 				db = db.Limit(q.ScheduleLength)
@@ -354,7 +354,7 @@ func GetListClassesByQueryAndCenterId(q consts.Query, centerId uuid.UUID, token 
 	// Lọc danh sách lớp cho role học viên
 	if helpers.IsStudent(token.RoleId) {
 		db.Joins("JOIN student_classes sc ON sc.class_id = classes.id").Where("sc.student_id = ? AND sc.status IS NULL OR sc.status != ?", token.ID, consts.Reserved).
-			Select("DISTINCT(classes.id)", "classes.name", "classes.type", "classes.metadata", "classes.start_at", "classes.total_lessons", "classes.code", "classes.`status`").
+			Select("DISTINCT(classes.id)", "classes.name", "classes.type", "classes.metadata", "classes.start_at", "classes.total_lessons", "classes.code", "classes.`status`", "classes.cancel_reason"). // Thêm cancel_reason vào select
 			Preload("StudentClasses", func(db *gorm.DB) *gorm.DB {
 				return db.Where("student_id = ?", token.ID).Select("class_id", "student_id", "progress")
 			}).
@@ -372,9 +372,9 @@ func GetListClassesByQueryAndCenterId(q consts.Query, centerId uuid.UUID, token 
 			}).
 			Where("classes.status != ?", consts.CLASS_CANCELED)
 	} else if q.StudentId != "" {
-		db.Select("DISTINCT(classes.id)", "classes.name, classes.metadata", "classes.type", "classes.start_at", "classes.curriculum_id", "classes.subject_id", "classes.branch_id", "classes.classroom_id", "classes.total_lessons", "classes.`status`").Order("classes.start_at ASC")
+		db.Select("DISTINCT(classes.id)", "classes.name, classes.metadata", "classes.type", "classes.start_at", "classes.curriculum_id", "classes.subject_id", "classes.branch_id", "classes.classroom_id", "classes.total_lessons", "classes.`status`", "classes.cancel_reason").Order("classes.start_at ASC") // Thêm cancel_reason vào select
 	} else {
-		db.Select("DISTINCT(classes.id)", "classes.created_at", "classes.name, classes.metadata", "classes.type", "classes.start_at", "classes.end_at", "classes.curriculum_id", "classes.subject_id", "classes.branch_id", "classes.classroom_id", "classes.total_lessons", "classes.`status`", "classes.`code`").Order("classes.created_at DESC")
+		db.Select("DISTINCT(classes.id)", "classes.created_at", "classes.name, classes.metadata", "classes.type", "classes.start_at", "classes.end_at", "classes.curriculum_id", "classes.subject_id", "classes.branch_id", "classes.classroom_id", "classes.total_lessons", "classes.`status`", "classes.`code`", "classes.cancel_reason").Order("classes.created_at DESC") // Thêm cancel_reason vào select
 	}
 
 	if !helpers.IsStudent(token.RoleId) {

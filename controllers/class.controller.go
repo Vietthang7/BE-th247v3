@@ -336,8 +336,17 @@ func CanceledClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusBadRequest, "Lớp học đã bị hủy rồi", consts.ERROR_CLASS_CANCELED_OR_FINISHED_NOT_CANCEL)
 	}
 
-	// Cập nhật trạng thái lớp học thành CLASS_CANCELED
+	// Lấy lý do hủy từ request body
+	var requestBody struct {
+		CancelReason string `json:"cancel_reason"`
+	}
+	if err := c.BodyParser(&requestBody); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, "Dữ liệu không hợp lệ", consts.InvalidReqInput)
+	}
+
+	// Cập nhật trạng thái lớp học thành CLASS_CANCELED và lưu lý do hủy
 	class.Status = consts.CLASS_CANCELED
+	class.CancelReason = requestBody.CancelReason
 
 	// Cập nhật lớp học trong cơ sở dữ liệu
 	err = repo.UpdateClassStatus(&class)

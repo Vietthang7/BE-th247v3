@@ -1,11 +1,12 @@
 package models
 
 import (
+	"intern_247/consts"
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
-	"intern_247/consts"
-	"time"
 )
 
 type Class struct {
@@ -49,6 +50,7 @@ type Class struct {
 	StudentsClasses     []StudentClasses       `gorm:"foreignKey:ClassId" json:"students_classes,omitempty"`
 	Lessons             []Lesson               `gorm:"foreignKey:ClassId" json:"lessons,omitempty"`
 	Status              int                    `gorm:"default:1;index" json:"status"`
+	CancelReason        string                 `gorm:"type:text" json:"cancel_reason,omitempty"`
 	Enrollment          *EnrollmentPlan        `json:"enrollment,omitempty" gorm:"foreignKey:PlanId"`
 	Exams               *[]ExamResult          `gorm:"foreignKey:ClassId" json:"exams,omitempty"`
 	SessionAttendancers []SessionAttendance    `gorm:"foreignKey:ClassId" json:"-"`
