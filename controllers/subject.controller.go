@@ -51,50 +51,49 @@ type SubjectUpdateInput struct {
 func CreateSubject(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
-		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+		return ResponseError(c, fiber.StatusUnauthorized, "Lỗi quyền truy cập", consts.ERROR_PERMISSION_DENIED)
 	}
 	if user.CenterId == nil {
-		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied - center", consts.ERROR_PERMISSION_DENIED)
+		return ResponseError(c, fiber.StatusUnauthorized, "Lỗi quyền truy cập - trung tâm không xác định", consts.ERROR_PERMISSION_DENIED)
 	}
 	var (
 		input   NewSubjectInput
 		subject models.Subject
 	)
 	if err := c.BodyParser(&input); err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Dữ liệu đầu vào không hợp lệ", consts.InvalidReqInput)
 	}
 	if !utils.IsValidStrLen(input.Name, 250) {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Tên môn học không hợp lệ", consts.InvalidReqInput)
 	}
 	if input.OriginFee < input.DiscountFee {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.ERROR_DATA_LONGER)
+		return ResponseError(c, fiber.StatusBadRequest, "Học phí giảm không thể lớn hơn học phí gốc", consts.ERROR_DATA_LONGER)
 	}
 	if input.FeeType != consts.FREE_SUBJECT && input.FeeType != consts.PAYMENT_SUBJECT {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Loại học phí không hợp lệ", consts.InvalidReqInput)
 	}
 	if input.Description == "" || input.InputRequire == "" || input.OutputRequire == "" {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Thông tin yêu cầu đầu vào và đầu ra không thể bỏ trống", consts.InvalidReqInput)
 	}
 	_, err := repo.GetCategoryByIdAndCenterId(input.CategoryId, *user.CenterId)
 	if err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Danh mục không hợp lệ", consts.InvalidReqInput)
 	}
 	if input.TotalLessons < 1 {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Số buổi học phải lớn hơn 0", consts.InvalidReqInput)
 	}
 	teacherInputLen := len(input.TeacherIds)
 	if teacherInputLen < 1 {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Cần chọn ít nhất một giảng viên", consts.InvalidReqInput)
 	}
 	teachers, _ := repo.GetTeachersByIdsAndCenterId(input.TeacherIds, *user.CenterId)
 	if len(teachers) != teacherInputLen {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.ERROR_TEACHER_NOT_FOUND)
+		return ResponseError(c, fiber.StatusBadRequest, "Không tìm thấy giảng viên", consts.ERROR_TEACHER_NOT_FOUND)
 	}
-	// check name subject is exists
-
+	// Kiểm tra tên môn học đã tồn tại chưa
 	if _, err = repo.GetSubjectByNameAndCenterId(input.Name, *user.CenterId); err == nil {
 		logrus.Error(err)
-		return ResponseError(c, fiber.StatusBadRequest, consts.ERROR_SUBJECT_EXISTS, consts.ERROR_SUBJECT_EXISTS)
+		return ResponseError(c, fiber.StatusBadRequest, "Môn học đã tồn tại", consts.ERROR_SUBJECT_EXISTS)
 	}
 
 	if input.FeeType == consts.PAYMENT_SUBJECT {
@@ -102,7 +101,6 @@ func CreateSubject(c *fiber.Ctx) error {
 		subject.DiscountFee = input.DiscountFee
 	}
 	subject.Name = input.Name
-
 	subject.InputRequire = input.InputRequire
 	subject.OutputRequire = input.OutputRequire
 	subject.Description = input.Description
@@ -118,10 +116,11 @@ func CreateSubject(c *fiber.Ctx) error {
 	subject.Code = utils.GenerateRandomCodeFormatByKey(consts.SUBJECT_CODE_PREFIX)
 	newSubject, err := repo.CreateSubject(&subject)
 	if err != nil {
-		return ResponseError(c, fiber.StatusInternalServerError, "Failed", consts.CreateFailed)
+		return ResponseError(c, fiber.StatusInternalServerError, "Tạo môn học thất bại", consts.CreateFailed)
 	}
-	return ResponseSuccess(c, fiber.StatusCreated, "success", newSubject)
+	return ResponseSuccess(c, fiber.StatusCreated, "Thành công", newSubject)
 }
+
 func UpdateSubject(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
@@ -280,38 +279,43 @@ func DeleteSubject(c *fiber.Ctx) error {
 	if user.CenterId == nil {
 		return ResponseError(c, fiber.StatusUnauthorized, "Error Permission denied - center", consts.ERROR_PERMISSION_DENIED)
 	}
-	type DeleteInput struct {
-		ID uuid.UUID `json:"id"`
-	}
-	var input DeleteInput
-	if err := c.BodyParser(&input); err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.InvalidReqInput)
-	}
-	_, err := repo.GetSubjectByIdAndCenterId(input.ID, *user.CenterId)
+
+	// Lấy ID từ params
+	idParam := c.Params("id")
+	subjectID, err := uuid.Parse(idParam)
 	if err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.InvalidReqInput)
+		return ResponseError(c, fiber.StatusBadRequest, "Invalid ID format", consts.InvalidReqInput)
 	}
-	classes, err := repo.GetClassesBySubjectIdAndCenterId(input.ID, *user.CenterId)
+
+	_, err = repo.GetSubjectByIdAndCenterId(subjectID, *user.CenterId)
 	if err != nil {
-		return ResponseError(c, fiber.StatusInternalServerError, "invalid", consts.ERROR_INTERNAL_SERVER_ERROR)
+		return ResponseError(c, fiber.StatusBadRequest, "Invalid ID", consts.InvalidReqInput)
+	}
+
+	classes, err := repo.GetClassesBySubjectIdAndCenterId(subjectID, *user.CenterId)
+	if err != nil {
+		return ResponseError(c, fiber.StatusInternalServerError, "Error retrieving classes", consts.ERROR_INTERNAL_SERVER_ERROR)
 	}
 	if len(classes) > 0 {
-		return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.ERROR_CAN_NOT_DELETE_SUBJECT_HAS_CLASS)
+		return ResponseError(c, fiber.StatusBadRequest, "Cannot delete subject with associated classes", consts.ERROR_CAN_NOT_DELETE_SUBJECT_HAS_CLASS)
 	}
-	//check student subject registed
-	students, err := repo.GetStudentsBySubjectAndCenterId(input.ID, *user.CenterId)
+
+	// Kiểm tra xem có học sinh nào đã đăng ký môn học này không
+	students, err := repo.GetStudentsBySubjectAndCenterId(subjectID, *user.CenterId)
 	if err != nil {
 		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.ERROR_INTERNAL_SERVER_ERROR)
 	}
 	if len(students) > 0 {
-		return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.ERROR_CAN_NOT_DELETE_SUBJECT_HAS_STUDENT)
+		return ResponseError(c, fiber.StatusBadRequest, "Cannot delete subject with registered students", consts.ERROR_CAN_NOT_DELETE_SUBJECT_HAS_STUDENT)
 	}
-	row, err := repo.DeleteSubjectByIdAndCenterId(input.ID, *user.CenterId)
+
+	row, err := repo.DeleteSubjectByIdAndCenterId(subjectID, *user.CenterId)
 	if row < 1 || err != nil {
-		return ResponseError(c, fiber.StatusInternalServerError, "Error", consts.ERROR_INTERNAL_SERVER_ERROR)
+		return ResponseError(c, fiber.StatusInternalServerError, "Error deleting subject", consts.ERROR_INTERNAL_SERVER_ERROR)
 	}
-	_, _ = repo.DeleteLessonBySubjectIdAndCenterId(input.ID, *user.CenterId)
-	return ResponseSuccess(c, fiber.StatusOK, "success", row)
+
+	_, _ = repo.DeleteLessonBySubjectIdAndCenterId(subjectID, *user.CenterId)
+	return ResponseSuccess(c, fiber.StatusOK, "Success", row)
 }
 
 func GetDetailSubject(c *fiber.Ctx) error {
