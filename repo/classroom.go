@@ -2,12 +2,13 @@ package repo
 
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
+
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func TsCreateClassroom(entry *models.Classroom, slots []models.TimeSlot, shifts []models.ShortShift) (err error) {
@@ -98,14 +99,18 @@ func FindClassrooms(p *consts.RequestTable, query interface{}, args []interface{
 		DB          = p.CustomOptions(app.Database.DB)
 	)
 	defer cancel()
+
 	if p.Search != "" {
 		DB = DB.Where("name LIKE ?", "%"+p.Search+"%")
 	}
+
 	err := DB.WithContext(ctx).Where(query, args...).Preload("Branch", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id", "name")
-	}).Find(&entries)
-	return entries, err.Error
+		return db.Select("id, name, address") // Load thêm Address
+	}).Find(&entries).Error
+
+	return entries, err
 }
+
 func CountClassroom(query interface{}, args []interface{}) int64 {
 	var (
 		count       int64

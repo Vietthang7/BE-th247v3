@@ -8,6 +8,7 @@ import (
 	"intern_247/helpers"
 	"intern_247/models"
 	"intern_247/utils"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -28,15 +29,22 @@ func FirstClassroom(query interface{}, args []interface{}, preload ...string) (m
 		DB          = app.Database.DB.WithContext(ctx).Where(query, args...)
 	)
 	defer cancel()
+
+	// Preload dữ liệu đầy đủ
 	if len(preload) > 0 {
 		PreloadClassroom(DB, preload...)
-		err = DB.First(&entry).Error
-		if entry.Schedule != nil && len(entry.Schedule.RoomShifts) > 0 {
-			ShortenRoomShifts(entry.Schedule)
-		}
-	} else {
-		err = DB.First(&entry).Error
 	}
+
+	// Đảm bảo load cả Address của Branch
+	err = DB.Preload("Branch", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, name, address")
+	}).Preload("Schedule").First(&entry).Error
+
+	// Rút gọn RoomShifts nếu có
+	if err == nil && entry.Schedule != nil && len(entry.Schedule.RoomShifts) > 0 {
+		ShortenRoomShifts(entry.Schedule)
+	}
+
 	return entry, err
 }
 
@@ -453,6 +461,72 @@ func GetListClassesByQueryAndCenterId(q consts.Query, centerId uuid.UUID, token 
 
 	return classes, pagination, overview, db.Error
 }
+
+func ListStudentInClass(classId uuid.UUID, p *consts.RequestTable, query interface{}, args []interface{}) ([]*models.Student, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+
+	var class models.Class
+	if err := app.Database.DB.WithContext(ctx).Preload("Students", func(db *gorm.DB) *gorm.DB {
+		return p.CustomOptions(db).Where(query, args...).Preload("StudyNeeds")
+	}).First(&class, "id = ?", classId).Error; err != nil {
+		return nil, err
+	}
+
+	studentIds := make([]uuid.UUID, len(class.Students))
+	for i, student := range class.Students {
+		studentIds[i] = student.ID
+	}
+
+	var studentClasses []models.StudentClasses
+	if err := app.Database.DB.Where("student_id IN (?) AND class_id = ?", studentIds, classId).Find(&studentClasses).Error; err != nil {
+		return nil, err
+	}
+
+	classMap := make(map[uuid.UUID]*time.Time)
+	statusMap := make(map[uuid.UUID]int64)
+	for _, sc := range studentClasses {
+		classMap[sc.StudentId] = sc.CreatedAt
+		if sc.Status != nil {
+			statusMap[sc.StudentId] = *sc.Status
+		}
+	}
+
+	for _, student := range class.Students {
+		switch {
+		case statusMap[student.ID] == consts.Reserved:
+			student.Status = consts.Reserved
+		case class.StartAt != nil && time.Now().Before(*class.StartAt):
+			student.Status = consts.GoingStudy
+		case class.EndAt != nil && time.Now().After(*class.EndAt):
+			student.Status = consts.StudyDone
+		default:
+			student.Status = consts.Studying
+		}
+		if addedAt, exists := classMap[student.ID]; exists {
+			student.AddedAt = addedAt
+		}
+	}
+
+	var trialStudents []*models.Student
+	if err := app.Database.DB.WithContext(ctx).Model(&models.Student{}).
+		Joins("JOIN student_sessions ss ON ss.student_id = students.id").
+		Joins("JOIN students s ON s.id = ss.student_id").
+		Where("ss.class_id = ? AND s.type = ?", classId, consts.Trial).Distinct().
+		Find(&trialStudents).Error; err != nil {
+		logrus.Error(err)
+		return class.Students, err
+	}
+	if len(trialStudents) > 0 {
+		for i := range trialStudents {
+			trialStudents[i].Status = consts.TrialStatus
+		}
+	}
+
+	class.Students = append(class.Students, trialStudents...)
+	return class.Students, nil
+}
+
 func CountStudentInClass(classId uuid.UUID) int64 {
 	var (
 		count       int64
@@ -462,6 +536,17 @@ func CountStudentInClass(classId uuid.UUID) int64 {
 	app.Database.DB.Model(&models.StudentClasses{}).WithContext(ctx).Where("class_id = ?", classId).Count(&count)
 	return count
 }
+
+func RemoveStudentInClass(classId, studentId uuid.UUID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+
+	if err := app.Database.DB.WithContext(ctx).Where("class_id = ? AND student_id = ?", classId, studentId).Delete(&models.StudentClasses{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
 	var (
 		count       int64
