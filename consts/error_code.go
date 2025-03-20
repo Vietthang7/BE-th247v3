@@ -91,6 +91,7 @@ const (
 	ERROR_START_DAY_MUST_SMALLER_THAN_END_DAY      = 6098 // Ngày bắt đầu phải nhỏ hơn ngày kết thúc
 	ERROR_SCHEDULE_CLASS_ATTENDANCED               = 6042 // Lớp học đã điểm danh, không thể xếp lịch
 	ERROR_CLASS_CANCELED_OR_FINISHED_NOT_CANCEL    = 6025 // Không thể cập nhật lớp học đã hủy hoặc đã kết thúc
+	ERROR_CLASS_STUDENT_CONFLICT_SCHEDULE          = 6027 //Lớp học bạn chọn đã trùng với lớp khác. Vui lòng chọn lớp học khác.
 	//// lesson data
 	//ERROR_LESSON_DATA_TEST_NAME_CONTAIN_SPECIAL_CHARACTER = 6069 // Ô dữ liệu không hỗ trợ ký tự đặc biệt.
 	//ERROR_LESSON_DATA_TEST_NAME_EXIST_IN_CLASS            = 6070 // Tên đề thi đã tồn tại. Vui lòng nhập tên khác
@@ -124,4 +125,7 @@ const (
 
 	//error detail
 	ERROR_SUBJECT_NOT_FOUND = "ERROR_SUBJECT_NOT_FOUND"
+	//success
+	CREATE_SUCCESS = "CREATE_SUCCESS"
+	DELETE_SUCCESS = "DELETE_SUCCESS"
 )

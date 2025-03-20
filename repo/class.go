@@ -559,6 +559,7 @@ func FindStudentsCanBeAddedIntoClass(class models.Class, search string) (entries
 	case consts.CLASS_TYPE_HYBRID:
 		formQuery = "AND (sn.is_offline_form = true OR sn.is_online_form = true)"
 	}
+	// Lấy ra các học viên có môn học tương ứng với lớp học , học viên không được nằm trong lớp học
 	if err = app.Database.DB.WithContext(ctx).Raw(`--
 		SELECT id , fullname FROM students s
 		JOIN (
@@ -598,15 +599,53 @@ func FindStudentsCanBeAddedIntoClass(class models.Class, search string) (entries
 		logrus.Error(err)
 		return nil, err
 	}
-	// var theOthers, matchSchedules uuid.UUIDs
-	// // Lọc ra ID các học viên không đăng ký lịch trống
-	// if len(hasSchedule) < 1 {
-	// 	theOthers = studentIds
-	// } else {
-	// 	theOthers = utils.FindTheOtherElems(studentIds, hasSchedule)
-	// }
-	return entries, nil
+	var theOthers, matchSchedules uuid.UUIDs
+	// Lọc ra ID các học viên không đăng ký lịch trống
+	if len(hasSchedule) < 1 {
+		theOthers = studentIds
+	} else {
+		theOthers = utils.FindTheOtherElems(studentIds, hasSchedule)
+	}
+	/* Với các student có đăng kí lịch, tiến hành check lịch đăng ký và lịch học của lớp.
+	matchSchedules là mảng ID các học viên đăng ký lịch thỏa mãn lịch học của lớp
+	*/
 
+	if err = app.Database.DB.WithContext(ctx).Raw(`SELECT t1.student_id
+	FROM schedule_classes sc
+	LEFT JOIN (
+		SELECT student_id, day_of_week, work_session_id
+		FROM shifts
+		WHERE deleted_at IS NULL
+		AND student_id IN ?	
+	) t1
+	ON t1.work_session_id = sc.work_session_id
+	AND t1.day_of_week + 1 = DAYOFWEEK(sc.start_date)
+	WHERE sc.class_id = ?
+	AND sc.parent_id IS NOT NULL
+	GROUP BY t1.student_id
+	HAVING COUNT(*) = (
+		SELECT COUNT(*)
+		FROM schedule_classes sc
+		WHERE sc.class_id = ?
+		AND sc.parent_id IS NOT NULL
+		AND sc.parent_id IS NOT NULL
+	)`, hasSchedule, class.ID, class.ID).Scan(&matchSchedules).Error; err != nil {
+		logrus.Error(err)
+		return nil, err
+	}
+	if len(matchSchedules) > 0 {
+		theOthers = append(theOthers, matchSchedules...)
+	}
+	var (
+		filteredStudent []StudentCanBeAddedIntoClass
+		ok              bool
+	)
+	for _, v := range theOthers {
+		if _, ok = mark[v]; ok {
+			filteredStudent = append(filteredStudent, mark[v])
+		}
+	}
+	return filteredStudent, nil
 }
 
 // DeleteClass xóa lớp học theo ID

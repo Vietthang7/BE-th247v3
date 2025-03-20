@@ -15,4 +15,5 @@ func ClassRoute(class fiber.Router) {
 	class.Delete("/class/:id", mdw.Gate("class", "delete"), controllers.DeleteClass)
 	class.Patch("/class/cancel/:id", mdw.Gate("class", "cancel"), controllers.CanceledClass)
 	class.Get("/class/:id/student_enroll", mdw.Gate("class", "list"), controllers.ListStudentByEnrollmentPlan)
+	class.Post("/class/add-student", mdw.Gate("class", "update"), controllers.AddStudentToClass)
 }

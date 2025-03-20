@@ -1,11 +1,12 @@
 package models
 
 import (
+	"intern_247/consts"
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
-	"intern_247/consts"
-	"time"
 )
 
 type Class struct {
@@ -91,4 +92,9 @@ func (c *Class) AfterFind(*gorm.DB) error {
 		c.Status = consts.CLASS_FINISHED
 	}
 	return nil
+}
+
+type StudentToClass struct {
+	StudentId uuid.UUID `json:"student_id"`
+	ClassId   uuid.UUID `json:"class_id"`
 }

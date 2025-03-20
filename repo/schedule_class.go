@@ -342,3 +342,23 @@ func CountScheduleClass(query string, args ...interface{}) (count int64) {
 	}
 	return
 }
+func GetScheduleClassByStudentId(studentId, centerId uuid.UUID) ([]models.ScheduleClass, error) {
+	var scheduleClasses []models.ScheduleClass
+	db := app.Database.DB.Where("schedule_classes.`center_id` = ?", centerId)
+	db.Joins("INNER JOIN classes c ON c.id = schedule_classes.class_id")
+	db.Joins("INNER JOIN student_classes sc ON schedule_classes.class_id = student_classes.class_id")
+	db.Order("schedule_classes.`start_date` ASC , schedule_classes.`start_time`, schedule_classes.`index`")
+	db.Where("student_classes.`student_id` = ? AND schedule_classes.`type` IS NULL AND c.`status` != ? AND (student_classes.status != ? OR student_classes.status IS NULL)", studentId, consts.CLASS_CANCELED, consts.Reserved).Find(&scheduleClasses)
+	return scheduleClasses, db.Error
+}
+func GetScheduleClassesByClassIdsAndCenterId(classIds []uuid.UUID, centerId uuid.UUID) ([]models.ScheduleClass, error) {
+	var schedules []models.ScheduleClass
+	db := app.Database.DB.Table("schedule_classes as sc").
+		Order("sc.`start_date` ASC , sc.`start_time` ASC, sc.`end_time` ASC,sc.`created_at` ASC").
+		Joins("INNER JOIN classes c on c.id = sc.class_id").
+		Where("sc.class_id IN (?) AND sc.center_id = ? AND sc.`start_date` IS NOT NULL AND c.status != ?", classIds, centerId, consts.CLASS_CANCELED).
+		Preload("Class", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name")
+		}).Find(&schedules)
+	return schedules, db.Error
+}
