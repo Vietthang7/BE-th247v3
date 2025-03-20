@@ -2,14 +2,16 @@ package repo
 
 import (
 	"context"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"intern_247/app"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/utils"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // TeacherIsArranged Kiểm tra xem giáo viên có được sắp xếp dạy lớp nào không.
@@ -331,4 +333,12 @@ func GetScheduleClassForStudent(query consts.Query, user TokenData) ([]models.Sc
 	db.Debug().Order("schedule_classes.`start_date` ASC").Find(&schedules)
 
 	return schedules, db.Error
+}
+func CountScheduleClass(query string, args ...interface{}) (count int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
+	defer cancel()
+	if err := app.Database.DB.WithContext(ctx).Model(&models.ScheduleClass{}).Where(query, args...).Count(&count); err != nil {
+		logrus.Error(err)
+	}
+	return
 }

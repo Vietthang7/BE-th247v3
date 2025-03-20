@@ -97,7 +97,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 
 	//get holiday
 	// Lấy danh sách ngày lễ (holidays) dựa trên ngày bắt đầu lớp (class.StartAt), chi nhánh (class.BranchId), và trung tâm (user.CenterId).
-	holidays, err := repo.GetHolidayByDateBranchIdAndCenterId(class.StartAt, class.BranchId, user.CenterId)
+	holidays, err := repo.GetHolidayByDateBranchIdAndCenterId(class.StartAt, *class.BranchId, user.CenterId)
 	if err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, "get holiday failed", consts.InvalidReqInput)
@@ -180,7 +180,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid asistant find current", consts.InvalidReqInput)
 	}
-	classrooms, err := repo.GetClassroomsByIdsAndBranchCenterId(classroomIds, class.BranchId, user.CenterId)
+	classrooms, err := repo.GetClassroomsByIdsAndBranchCenterId(classroomIds, *class.BranchId, user.CenterId)
 	if err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid classroom", consts.InvalidReqInput)
@@ -383,7 +383,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 	if (len(input.ScheduleDetails)+totalLessonChild) != int(class.TotalLessons) && input.Type == consts.SCHEDULE_CLASS_DAY_TYPE {
 		return ResponseError(c, fiber.StatusBadRequest, "Total lesson invalid", consts.ERROR_TOTAL_LESSONS_NOT_EQUAL)
 	}
-	workSessions, err := repo.GetActiveWorkSessionByIdsAndBranchCenter(workSessionIds, class.BranchId, user.CenterId)
+	workSessions, err := repo.GetActiveWorkSessionByIdsAndBranchCenter(workSessionIds, *class.BranchId, user.CenterId)
 	if err != nil {
 		return ResponseError(c, fiber.StatusBadRequest, "ws", consts.InvalidReqInput)
 	}
