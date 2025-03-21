@@ -252,7 +252,51 @@ func CheckStudentExists(studentID uuid.UUID) error {
 	}
 	return nil
 }
-func AddStudentToClass(input []models.StudentToClass, token TokenData, c *fiber.Ctx) error {
+
+// func AddStudentToClass(input []models.StudentToClass, token TokenData, c *fiber.Ctx) error {
+// 	tx := app.Database.DB.Begin()
+// 	defer func() {
+// 		if r := recover(); r != nil {
+// 			tx.Rollback()
+// 		}
+// 	}()
+// 	var err error
+// 	for _, dataInput := range input {
+// 		var class models.Class
+// 		if err := tx.Model(&models.Class{}).Where("id = ? AND center_id = ?", dataInput.ClassId, token.CenterId).First(&class).Error; err != nil {
+// 			tx.Rollback()
+// 			return err
+// 		}
+// 		if class.Status == consts.CLASS_CANCELED {
+// 			tx.Rollback()
+// 			return errors.New("class is canceled")
+// 		}
+// 		var student models.Student
+// 		if err := tx.Model(&models.Student{}).Where("id = ?", dataInput.StudentId).First(&student).Error; err != nil {
+// 			tx.Rollback()
+// 			return err
+// 		}
+// 		now := time.Now()
+// 		studentClassInfo := models.StudentClasses{
+// 			ClassId:   class.ID,
+// 			StudentId: student.ID,
+// 			CreatedAt: &now,
+// 		}
+// 		if err := tx.Model(&models.StudentClasses{}).Create(&studentClassInfo).Error; err != nil {
+// 			logrus.Error(err)
+// 			tx.Rollback()
+// 			return err
+// 		}
+// 		if student.Status, err = LoadStatusTransaction(tx, student.ID, token.CenterId); err != nil {
+// 			logrus.Error(err)
+// 			tx.Rollback()
+// 			return err
+// 		}
+// 	}
+// 	return tx.Commit().Error
+// }
+
+func AddStudentToClass(input models.AddStudentsToClassInput, token TokenData, c *fiber.Ctx) error {
 	tx := app.Database.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -260,18 +304,18 @@ func AddStudentToClass(input []models.StudentToClass, token TokenData, c *fiber.
 		}
 	}()
 	var err error
-	for _, dataInput := range input {
-		var class models.Class
-		if err := tx.Model(&models.Class{}).Where("id = ? AND center_id = ?", dataInput.ClassId, token.CenterId).First(&class).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-		if class.Status == consts.CLASS_CANCELED {
-			tx.Rollback()
-			return errors.New("class is canceled")
-		}
+	var class models.Class
+	if err := tx.Model(&models.Class{}).Where("id = ? AND center_id = ?", input.ClassId, token.CenterId).First(&class).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if class.Status == consts.CLASS_CANCELED {
+		tx.Rollback()
+		return errors.New("class is canceled")
+	}
+	for _, studentId := range input.StudentId {
 		var student models.Student
-		if err := tx.Model(&models.Student{}).Where("id = ?", dataInput.StudentId).First(&student).Error; err != nil {
+		if err := tx.Model(&models.Student{}).Where("id = ?", studentId).First(&student).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
