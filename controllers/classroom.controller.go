@@ -3,13 +3,14 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
 	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func CreateClassroom(c *fiber.Ctx) error {

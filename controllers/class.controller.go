@@ -232,6 +232,16 @@ func UpdateClass(c *fiber.Ctx) error {
 	class.EndAt = input.EndAt
 	//class.PlanId = input.PlanId
 	class.Type = input.Type
+
+	// Cập nhật trạng thái của lớp học dựa trên thời gian
+	if class.StartAt != nil && time.Now().Before(*class.StartAt) {
+		class.Status = consts.CLASS_COMING_SOON
+	} else if class.EndAt != nil && time.Now().After(*class.EndAt) {
+		class.Status = consts.CLASS_FINISHED
+	} else {
+		class.Status = consts.CLASS_IN_PROGRESS
+	}
+
 UpdateMoreInfo:
 	class.Description = input.Description
 	class.GroupUrl = input.GroupUrl

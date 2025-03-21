@@ -5,7 +5,6 @@ import (
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
-	"intern_247/utils"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -63,50 +62,117 @@ func AddStudentToClass(c *fiber.Ctx) error {
 		studentClasses[input[i].StudentId] = append(studentClasses[input[i].StudentId], input[i].ClassId)
 	}
 	// Kiểm tra lịch trùng của từng học sinh
-	for i := range studentIds {
-		if len(studentClasses[studentIds[i]]) > 0 {
-			// lấy ra lịch cũ của học viên
-			scheduleClasses, err := repo.GetScheduleClassByStudentId(studentIds[i], token.CenterId)
-			if err != nil {
-				logrus.Error(err)
-				return ResponseError(c, fiber.StatusBadRequest, "failed get student schedule", consts.InvalidReqInput)
-			}
-			// để lấy lịch học của các lớp mới mà học sinh muốn tham gia.
-			newScheduleClasses, err := repo.GetScheduleClassesByClassIdsAndCenterId(studentClasses[studentIds[i]], token.CenterId)
-			if err != nil {
-				logrus.Error(err)
-				return ResponseError(c, fiber.StatusBadRequest, "failed get student schedule", consts.InvalidReqInput)
-			}
-			// Kiểm tra xung đột lịch học giữa các lớp mới
-			for i := range newScheduleClasses {
-				for j := i + 1; j < len(newScheduleClasses); j++ {
-					if newScheduleClasses[i].ClassId != newScheduleClasses[j].ClassId {
-						scStartAt1 := utils.MixedDateAndTime(newScheduleClasses[i].StartDate, newScheduleClasses[i].StartTime)
-						scEndAt1 := utils.MixedDateAndTime(newScheduleClasses[i].StartDate, newScheduleClasses[i].EndTime)
-						scStartAt2 := utils.MixedDateAndTime(newScheduleClasses[j].StartDate, newScheduleClasses[j].StartTime)
-						scEndAt2 := utils.MixedDateAndTime(newScheduleClasses[j].StartDate, newScheduleClasses[j].EndTime)
-						if utils.IsTimeRangeOverlap(*scStartAt1, *scEndAt1, *scStartAt2, *scEndAt2) {
-							return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.ERROR_CLASS_STUDENT_CONFLICT_SCHEDULE)
-						}
-					}
-				}
-			}
-			// Kiểm tra xung đội lịch học giữa các lớp cũ và mới
-			for _, sc := range scheduleClasses {
-				scStartAt := utils.MixedDateAndTime(sc.StartDate, sc.StartTime)
-				scEndAt := utils.MixedDateAndTime(sc.StartDate, sc.EndTime)
-				for _, nsc := range newScheduleClasses {
-					nscStartAt := utils.MixedDateAndTime(nsc.StartDate, nsc.StartTime)
-					nscEndAt := utils.MixedDateAndTime(nsc.StartDate, nsc.EndTime)
-					if utils.IsTimeRangeOverlap(*scStartAt, *scEndAt, *nscStartAt, *nscEndAt) {
-						return ResponseError(c, fiber.StatusBadRequest, nsc.Class.Name, consts.ERROR_CLASS_STUDENT_CONFLICT_SCHEDULE)
-					}
-				}
-			}
-		}
-	}
+	// for i := range studentIds {
+	// 	if len(studentClasses[studentIds[i]]) > 0 {
+	// 		// lấy ra lịch cũ của học viên
+	// 		scheduleClasses, err := repo.GetScheduleClassByStudentId(studentIds[i], token.CenterId)
+	// 		if err != nil {
+	// 			logrus.Error(err)
+	// 			return ResponseError(c, fiber.StatusBadRequest, "failed get student schedule", consts.InvalidReqInput)
+	// 		}
+	// 		// để lấy lịch học của các lớp mới mà học sinh muốn tham gia.
+	// 		newScheduleClasses, err := repo.GetScheduleClassesByClassIdsAndCenterId(studentClasses[studentIds[i]], token.CenterId)
+	// 		if err != nil {
+	// 			logrus.Error(err)
+	// 			return ResponseError(c, fiber.StatusBadRequest, "failed get student schedule", consts.InvalidReqInput)
+	// 		}
+	// 		// Kiểm tra xung đột lịch học giữa các lớp mới
+	// 		for i := range newScheduleClasses {
+	// 			for j := i + 1; j < len(newScheduleClasses); j++ {
+	// 				if newScheduleClasses[i].ClassId != newScheduleClasses[j].ClassId {
+	// 					scStartAt1 := utils.MixedDateAndTime(newScheduleClasses[i].StartDate, newScheduleClasses[i].StartTime)
+	// 					scEndAt1 := utils.MixedDateAndTime(newScheduleClasses[i].StartDate, newScheduleClasses[i].EndTime)
+	// 					scStartAt2 := utils.MixedDateAndTime(newScheduleClasses[j].StartDate, newScheduleClasses[j].StartTime)
+	// 					scEndAt2 := utils.MixedDateAndTime(newScheduleClasses[j].StartDate, newScheduleClasses[j].EndTime)
+	// 					if utils.IsTimeRangeOverlap(*scStartAt1, *scEndAt1, *scStartAt2, *scEndAt2) {
+	// 						return ResponseError(c, fiber.StatusBadRequest, "invalid", consts.ERROR_CLASS_STUDENT_CONFLICT_SCHEDULE)
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		// Kiểm tra xung đội lịch học giữa các lớp cũ và mới
+	// 		for _, sc := range scheduleClasses {
+	// 			scStartAt := utils.MixedDateAndTime(sc.StartDate, sc.StartTime)
+	// 			scEndAt := utils.MixedDateAndTime(sc.StartDate, sc.EndTime)
+	// 			for _, nsc := range newScheduleClasses {
+	// 				nscStartAt := utils.MixedDateAndTime(nsc.StartDate, nsc.StartTime)
+	// 				nscEndAt := utils.MixedDateAndTime(nsc.StartDate, nsc.EndTime)
+	// 				if utils.IsTimeRangeOverlap(*scStartAt, *scEndAt, *nscStartAt, *nscEndAt) {
+	// 					return ResponseError(c, fiber.StatusBadRequest, nsc.Class.Name, consts.ERROR_CLASS_STUDENT_CONFLICT_SCHEDULE)
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 	if err := repo.AddStudentToClass(input, token, c); err != nil {
 		return ResponseError(c, fiber.StatusInternalServerError, "invalid", consts.ERROR_INTERNAL_SERVER_ERROR)
 	}
-	return ResponseSuccess(c, fiber.StatusCreated, consts.CREATE_SUCCESS, consts.CREATE_SUCCESS)
+	return ResponseSuccess(c, fiber.StatusCreated, "Thêm học viên thành công", consts.CREATE_SUCCESS)
+}
+
+func ListStudentInClass(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		return ResponseError(c, fiber.StatusForbidden, "Error Permission denied", consts.ERROR_PERMISSION_DENIED)
+	}
+
+	var (
+		err        error
+		entries    []*models.Student
+		pagination consts.RequestTable
+		query      = "center_id = ?"
+		args       = []interface{}{*user.CenterId}
+	)
+
+	classId, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+	}
+
+	if c.Query("alphabetName") == "true" {
+		pagination = consts.BindRequestTable(c, "name")
+		pagination.Dir = "asc"
+	} else {
+		pagination = consts.BindRequestTable(c, "created_at")
+	}
+	if pagination.Search != "" {
+		query += " AND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)"
+		args = append(args, "%"+pagination.Search+"%", "%"+pagination.Search+"%", "%"+pagination.Search+"%")
+	}
+	if entries, err = repo.ListStudentInClass(classId, &pagination, query, args); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, consts.GetFail, err.Error())
+	}
+	pagination.Total = repo.CountStudentInClass(classId)
+	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
+		"data":       entries,
+		"pagination": pagination,
+	})
+}
+
+func RemoveStudentInClass(c *fiber.Ctx) error {
+	token, err := repo.GetTokenData(c)
+	if err != nil {
+		return ResponseError(c, fiber.StatusForbidden, "invalid", consts.ERROR_PERMISSION_DENIED)
+	}
+	if token.RoleId == consts.Student {
+		return ResponseError(c, fiber.StatusForbidden, "invalid", consts.ERROR_PERMISSION_DENIED)
+	}
+
+	classId, err := uuid.Parse(c.Params("classId"))
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+	}
+
+	studentId, err := uuid.Parse(c.Params("studentId"))
+	if err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+	}
+
+	if err := repo.RemoveStudentInClass(classId, studentId); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError, "invalid", consts.ERROR_INTERNAL_SERVER_ERROR)
+	}
+
+	return ResponseSuccess(c, fiber.StatusOK, "Xóa học viên thành công", consts.DELETE_SUCCESS)
 }
