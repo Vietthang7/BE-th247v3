@@ -99,3 +99,7 @@ type StudentToClass struct {
 	StudentId uuid.UUID `json:"student_id"`
 	ClassId   uuid.UUID `json:"class_id"`
 }
+type AddStudentsToClassInput struct {
+	ClassId   uuid.UUID   `json:"class_id"`
+	StudentId []uuid.UUID `json:"student_id"`
+}
