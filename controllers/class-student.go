@@ -169,7 +169,7 @@ func ListStudentInClass(c *fiber.Ctx) error {
 	})
 }
 
-func RemoveStudentInClass(c *fiber.Ctx) error {
+func RemoveStudentFromClass(c *fiber.Ctx) error {
 	token, err := repo.GetTokenData(c)
 	if err != nil {
 		return ResponseError(c, fiber.StatusForbidden, "invalid", consts.ERROR_PERMISSION_DENIED)
@@ -178,18 +178,12 @@ func RemoveStudentInClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusForbidden, "invalid", consts.ERROR_PERMISSION_DENIED)
 	}
 
-	classId, err := uuid.Parse(c.Params("classId"))
-	if err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
+	var input models.RemoveStudentsFromClassInput
+	if err := c.BodyParser(&input); err != nil {
+		return ResponseError(c, fiber.StatusBadRequest, err.Error(), consts.InvalidReqInput)
 	}
 
-	studentId, err := uuid.Parse(c.Params("studentId"))
-	if err != nil {
-		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.InvalidReqInput)
-	}
-
-	if err := repo.RemoveStudentInClass(classId, studentId); err != nil {
-		logrus.Error(err)
+	if err := repo.RemoveStudentFromClass(input, token, c); err != nil {
 		return ResponseError(c, fiber.StatusInternalServerError, "invalid", consts.ERROR_INTERNAL_SERVER_ERROR)
 	}
 
