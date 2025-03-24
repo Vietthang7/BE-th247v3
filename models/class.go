@@ -103,3 +103,8 @@ type AddStudentsToClassInput struct {
 	ClassId   uuid.UUID   `json:"class_id"`
 	StudentId []uuid.UUID `json:"student_id"`
 }
+
+type RemoveStudentsFromClassInput struct {
+	ClassId   uuid.UUID   `json:"class_id"`
+	StudentId []uuid.UUID `json:"student_id"`
+}

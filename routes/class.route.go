@@ -12,10 +12,10 @@ func ClassRoute(class fiber.Router) {
 	class.Get("/class/:id", mdw.Gate("class", "read"), controllers.GetDetailClass)
 	class.Patch("/class", mdw.Gate("class", "update"), controllers.UpdateClass)
 	class.Get("/classes", mdw.Gate("class", "list"), controllers.GetListClasses)
+	class.Delete("/class/remove-student", mdw.Gate("class", "delete"), controllers.RemoveStudentFromClass)
 	class.Delete("/class/:id", mdw.Gate("class", "delete"), controllers.DeleteClass)
 	class.Patch("/class/cancel/:id", mdw.Gate("class", "cancel"), controllers.CanceledClass)
 	class.Get("/class/:id/student_enroll", mdw.Gate("class", "list"), controllers.ListStudentByEnrollmentPlan)
 	class.Post("/class/add-student", mdw.Gate("class", "update"), controllers.AddStudentToClass)
 	class.Get("/class/:id/student", mdw.Gate("class", "read"), controllers.ListStudentInClass)
-	class.Delete("/class/:classId/students/:studentId", controllers.RemoveStudentInClass)
 }

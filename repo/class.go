@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"intern_247/app"
 	"intern_247/consts"
@@ -10,6 +11,7 @@ import (
 	"intern_247/utils"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -537,14 +539,46 @@ func CountStudentInClass(classId uuid.UUID) int64 {
 	return count
 }
 
-func RemoveStudentInClass(classId, studentId uuid.UUID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), app.CTimeOut)
-	defer cancel()
+func RemoveStudentFromClass(input models.RemoveStudentsFromClassInput, token TokenData, c *fiber.Ctx) error {
+	tx := app.Database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
-	if err := app.Database.DB.WithContext(ctx).Where("class_id = ? AND student_id = ?", classId, studentId).Delete(&models.StudentClasses{}).Error; err != nil {
+	var class models.Class
+	if err := tx.Model(&models.Class{}).Where("id = ? AND center_id = ?", input.ClassId, token.CenterId).First(&class).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
-	return nil
+
+	if class.Status == consts.CLASS_CANCELED {
+		tx.Rollback()
+		return errors.New("class is canceled")
+	}
+
+	for _, studentId := range input.StudentId {
+		var studentClass models.StudentClasses
+		if err := tx.Model(&models.StudentClasses{}).Where("class_id = ? AND student_id = ?", input.ClassId, studentId).First(&studentClass).Error; err != nil {
+			tx.Rollback()
+			return errors.New("student not found in class")
+		}
+
+		if err := tx.Where("class_id = ? AND student_id = ?", input.ClassId, studentId).Delete(&studentClass).Error; err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+
+		if _, err := LoadStatusTransaction(tx, studentId, token.CenterId); err != nil {
+			logrus.Error(err)
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }
 
 func CountLessonLearned(classId uuid.UUID, studentId uuid.UUID) int64 {
