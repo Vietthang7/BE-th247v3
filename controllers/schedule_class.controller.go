@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
@@ -11,6 +9,9 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

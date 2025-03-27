@@ -26,6 +26,18 @@ func CreateClassroom(c *fiber.Ctx) error {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusBadRequest, fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.InvalidReqInput)
 	}
+
+	// Automatically set is_online based on room_type
+	if form.RoomType == "Zoom" || form.RoomType == "Live class" || form.RoomType == "Google Meet" {
+		isOnline := true
+		form.IsOnline = &isOnline // Assign a pointer to the boolean value
+	} else if form.RoomType == "Practicing" || form.RoomType == "Theory" {
+		isOnline := false
+		form.IsOnline = &isOnline // Assign a pointer to the boolean value
+	} else {
+		return ResponseError(c, fiber.StatusBadRequest, "Invalid room_type", consts.InvalidReqInput)
+	}
+
 	// name validation
 	_, err = repo.FirstClassroom("center_id = ? AND name = ?", []interface{}{*user.CenterId, form.Name})
 	switch {
