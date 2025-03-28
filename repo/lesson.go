@@ -116,7 +116,7 @@ func CountLessonData(query string, args []interface{}) (count int64) {
 }
 func FilterDetailLessonByLive(isLive bool, classId, centerId uuid.UUID) ([]models.Lesson, error) {
 	var lessons []models.Lesson
-	db := app.Database.DB.Where("class_id = ? AND center_id = ? AND parent_id IS NULL", classId, centerId)
+	db := app.Database.DB.Where("center_id = ? AND parent_id IS NULL", centerId)
 	db.Preload("Childrens", func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_live = ?", true).Order("position ASC, created_at ASC").Select("id", "name", "parent_id")
 	})
