@@ -118,9 +118,9 @@ func FilterDetailLessonByLive(isLive bool, classId, centerId uuid.UUID) ([]model
 	var lessons []models.Lesson
 	db := app.Database.DB.Where("class_id = ? AND center_id = ? AND parent_id IS NULL", classId, centerId)
 	db.Preload("Childrens", func(db *gorm.DB) *gorm.DB {
-		return db.Where("is_live = ?", isLive).Order("position ASC, created_at ASC").Select("id", "name", "parent_id")
+		return db.Where("is_live = ?", true).Order("position ASC, created_at ASC").Select("id", "name", "parent_id")
 	})
-	db.Order("position ASC, created_at ASC").Find(&lessons)
+	db.Order("position ASC, created_at ASC").Debug().Find(&lessons)
 	if db.Error != nil {
 		fmt.Println(db.Error.Error())
 	}

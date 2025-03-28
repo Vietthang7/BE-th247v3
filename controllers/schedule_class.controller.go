@@ -552,12 +552,14 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.DataNotFound)
 	}
 	for i := range lessons {
-		fmt.Println("chay vao day")
+		//fmt.Println(lessons[i])
 		listLessonsSync = append(listLessonsSync, lessons[i].Childrens...)
 	}
-	if len(listLessonsSync) != len(listScheduleIdSync) {
-		return ResponseError(c, fiber.StatusInternalServerError, "total invalid", consts.ERROR_TOTAL_LESSONS_NOT_EQUAL)
-	}
+	fmt.Println(listLessonsSync)
+	fmt.Println(listScheduleIdSync)
+	//if len(listLessonsSync) != len(listScheduleIdSync) {
+	//	return ResponseError(c, fiber.StatusInternalServerError, "total invalid", consts.ERROR_TOTAL_LESSONS_NOT_EQUAL)
+	//}
 
 	for i := range listLessonsSync {
 		listLessonsSync[i].ScheduleId = listScheduleIdSync[i]
