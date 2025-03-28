@@ -34,7 +34,7 @@ func GetScheduleClassById(id uuid.UUID, centerId uuid.UUID) (models.ScheduleClas
 }
 func GetScheduleClassByIds(ids []uuid.UUID, centerId uuid.UUID) ([]models.ScheduleClass, error) {
 	var schedules []models.ScheduleClass
-	db := app.Database.DB.Debug().Where("id IN ? AND center_id = ?", ids, centerId).Find(&schedules)
+	db := app.Database.DB.Where("id IN ? AND center_id = ?", ids, centerId).Find(&schedules)
 	return schedules, db.Error
 }
 func GetSingleScheduleClassByClassId(classId, centerId uuid.UUID) (models.ScheduleClass, error) {
@@ -85,7 +85,7 @@ func GetScheduleClassByTeacherIdAndLimitDate(classId, teacherId uuid.UUID, times
 		dateStrings = append(dateStrings, t.Format("2006-01-02"))
 	}
 	db := app.Database.DB.Order("schedule_classes.`start_date` ASC, schedule_classes.`start_time` ASC, schedule_classes.`index` ASC").Where("schedule_classes.`teacher_id` = ? AND DATE(schedule_classes.`start_date`) IN (?) AND schedule_classes.`class_id` != ?", teacherId, dateStrings, classId)
-	db.Joins("INNER JOIN classes ON classes.`id` = schedule_class.`class_id`").Where("classes.`status` != ? AND classes.`status` != ?", consts.CLASS_CANCELED, consts.CLASS_FINISHED)
+	db.Joins("INNER JOIN classes ON classes.`id` = schedule_classes.`class_id`").Where("classes.`status` != ? AND classes.`status` != ?", consts.CLASS_CANCELED, consts.CLASS_FINISHED)
 	db.Find(&schedules)
 	return schedules, db.Error
 }

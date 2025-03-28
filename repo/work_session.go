@@ -62,7 +62,7 @@ func GetActiveWorkSessionByIdsAndBranchCenter(ids []uuid.UUID, branchId uuid.UUI
 	tx.Preload("Branch", func(db *gorm.DB) *gorm.DB {
 		return db.Select("id", "name")
 	})
-	tx.Debug().Where("id IN ? AND (branch_id = ? OR branch_id IS NULL) AND center_id = ? AND is_active = ?", ids, branchId, centerId, true).Find(&workSessions)
+	tx.Where("id IN ? AND (branch_id = ? OR branch_id IS NULL) AND center_id = ? AND is_active = ?", ids, branchId, centerId, true).Find(&workSessions)
 	return workSessions, tx.Error
 }
 

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"intern_247/consts"
 	"intern_247/models"
 	"intern_247/repo"
@@ -165,6 +166,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid teacher", consts.InvalidReqInput)
 	}
 	if len(teachers) != len(teacherIds) {
+		fmt.Println("chay vao day")
 		return ResponseError(c, fiber.StatusBadRequest, "Invalid teacher1", consts.InvalidReqInput)
 	}
 	asisants, err := repo.GetAsistantsByIdsAndCenterId(asistantIds, user.CenterId)
@@ -280,6 +282,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		if len(teacherCalendarStart[teachers[i].ID]) > 0 {
 			schedules, err := repo.GetScheduleClassByTeacherIdAndLimitDate(input.ClassId, teachers[i].ID, teacherCalendarStart[teachers[i].ID])
 			if err != nil {
+				logrus.Error(err)
 				return ResponseError(c, fiber.StatusInternalServerError, "Error", consts.ERROR_INTERNAL_SERVER_ERROR)
 			}
 
@@ -539,6 +542,8 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 	if len(listScheduleIdChanged) > 0 {
 		schedulesOld, _ := repo.GetScheduleClassByIds(listScheduleIdChanged, user.CenterId)
 		if len(schedulesOld) != len(listScheduleIdChanged) {
+			fmt.Println(schedulesOld)
+			fmt.Println(listScheduleIdChanged)
 			return ResponseError(c, fiber.StatusBadRequest, "list record not found", consts.CreateFailed)
 		}
 	}
@@ -547,6 +552,7 @@ func CreateScheduleClass(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusInternalServerError, err.Error(), consts.DataNotFound)
 	}
 	for i := range lessons {
+		fmt.Println("chay vao day")
 		listLessonsSync = append(listLessonsSync, lessons[i].Childrens...)
 	}
 	if len(listLessonsSync) != len(listScheduleIdSync) {
