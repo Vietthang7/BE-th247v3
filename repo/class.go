@@ -481,7 +481,7 @@ func ListStudentInClass(classId uuid.UUID, p *consts.RequestTable, query interfa
 	}
 
 	var studentClasses []models.StudentClasses
-	if err := app.Database.DB.Where("student_id IN (?) AND class_id = ?", studentIds, classId).Find(&studentClasses).Error; err != nil {
+	if err := app.Database.DB.Where("student_id IN (?) AND class_id = ? ", studentIds, classId).Find(&studentClasses).Error; err != nil {
 		return nil, err
 	}
 
